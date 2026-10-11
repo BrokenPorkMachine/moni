@@ -24,6 +24,32 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(moni.ConfigError):
             moni.load_config(self.config({"checks": [{"name": "x", "type": "udp"}]}))
 
+    def test_check_metadata_and_duplicate_validation(self):
+        checks = moni.load_config(
+            self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80,
+                                      "group": "ops", "tags": ["critical"]}]})
+        )
+        self.assertEqual(checks[0]["group"], "ops")
+        self.assertEqual(checks[0]["tags"], ["critical"])
+        duplicate = self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80,
+                                               "tags": ["ops", "ops"]}]})
+        with self.assertRaises(moni.ConfigError):
+            moni.load_config(duplicate)
+
+    def test_select_checks_filters_group_and_tags(self):
+        checks = [
+            {"name": "a", "group": "ops", "tags": ["critical", "tcp"]},
+            {"name": "b", "group": "public", "tags": ["critical"]},
+        ]
+        selected = moni.select_checks(checks, group="ops", tags=["critical"])
+        self.assertEqual([check["name"] for check in selected], ["a"])
+
+    def test_json_result_includes_metadata(self):
+        result = moni.CheckResult("health", "http", True, 1.0, group="ops", tags=("critical",))
+        encoded = json.loads(moni.render([result], True))
+        self.assertEqual(encoded[0]["group"], "ops")
+        self.assertEqual(encoded[0]["tags"], ["critical"])
+
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(
             {"checks": [{"name": "${MONI_NAME}", "type": "http", "url": "${MONI_URL}"}]}

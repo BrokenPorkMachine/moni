@@ -22,6 +22,10 @@ python3 moni.py check examples/moni.json --history .moni/history.sqlite \
 moni --version
 ```
 
+Checks may declare a `group` and string `tags`. Select a group with
+`--group NAME` and require one or more tags with repeatable `--tag NAME`.
+JSON output includes the group and tags for downstream tooling.
+
 Exit codes:
 
 - `0`: every check passed.

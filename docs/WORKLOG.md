@@ -135,3 +135,18 @@ Added safe environment-variable references to JSON configuration:
 
 Validation: `make smoke` passed and the full suite passed 24 tests with
 `ResourceWarning` promoted to errors.
+
+## Long-term workload 3 — 2026-10-11
+
+Added grouped and tagged checks for local operator workflows:
+
+- Added optional `group` and `tags` metadata with validation and duplicate-name
+  protection for stable persisted state.
+- Added repeatable `--tag` and `--group` filters to `check`.
+- Included group and tags in structured JSON results while preserving the
+  existing human-readable output and exit codes.
+- Documented the metadata and updated the sample configuration.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 27 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed.

@@ -41,6 +41,8 @@ class CheckResult:
     latency_ms: float | None
     status: int | None = None
     error: str | None = None
+    group: str = "default"
+    tags: tuple[str, ...] = ()
 
 
 def load_config(path: Path) -> list[dict[str, Any]]:
@@ -52,8 +54,12 @@ def load_config(path: Path) -> list[dict[str, Any]]:
     if not isinstance(data, dict) or not isinstance(data.get("checks"), list):
         raise ConfigError("config must be an object with a checks array")
     checks = data["checks"]
+    names: set[str] = set()
     for index, check in enumerate(checks):
         validate_check(check, index)
+        if check["name"] in names:
+            raise ConfigError(f"checks[{index}].name must be unique")
+        names.add(check["name"])
     return checks
 
 
@@ -88,6 +94,14 @@ def validate_check(check: Any, index: int = 0) -> None:
         raise ConfigError(f"checks[{index}].name must be a non-empty string")
     if kind not in {"http", "tcp"}:
         raise ConfigError(f"checks[{index}].type must be http or tcp")
+    group = check.get("group", "default")
+    if not isinstance(group, str) or not group.strip():
+        raise ConfigError(f"checks[{index}].group must be a non-empty string")
+    tags = check.get("tags", [])
+    if not isinstance(tags, list) or any(not isinstance(tag, str) or not tag.strip() for tag in tags):
+        raise ConfigError(f"checks[{index}].tags must be an array of non-empty strings")
+    if len(tags) != len(set(tags)):
+        raise ConfigError(f"checks[{index}].tags must not contain duplicates")
     timeout = check.get("timeout_seconds", 5)
     if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
         raise ConfigError(f"checks[{index}].timeout_seconds must be positive")
@@ -149,6 +163,8 @@ def result(
         latency_ms=round((time.monotonic() - started) * 1000, 2),
         status=status,
         error=error,
+        group=check.get("group", "default"),
+        tags=tuple(check.get("tags", [])),
     )
 
 
@@ -166,6 +182,18 @@ def run_checks(checks: list[dict[str, Any]], workers: int | None = None) -> list
         for future in as_completed(futures):
             results[futures[future]] = future.result()
     return [item for item in results if item is not None]
+
+
+def select_checks(
+    checks: list[dict[str, Any]], group: str | None = None, tags: list[str] | None = None
+) -> list[dict[str, Any]]:
+    required_tags = tags or []
+    return [
+        check
+        for check in checks
+        if (group is None or check.get("group", "default") == group)
+        and all(tag in check.get("tags", []) for tag in required_tags)
+    ]
 
 
 def render(results: list[CheckResult], json_output: bool) -> str:
@@ -217,6 +245,8 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--history", type=Path, default=None, metavar="PATH", help="append results to SQLite")
             sub.add_argument("--webhook", default=None, metavar="URL", help="POST changed states to a webhook")
             sub.add_argument("--webhook-attempts", type=int, default=3, metavar="N")
+            sub.add_argument("--group", default=None, help="run only checks in this group")
+            sub.add_argument("--tag", action="append", default=[], help="run checks containing this tag")
     history_parser = subparsers.add_parser("history", help="inspect stored observations")
     history_parser.add_argument("path", type=Path)
     history_parser.add_argument("--limit", type=int, default=20)
@@ -237,6 +267,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "validate":
             print(f"valid: {len(checks)} checks")
             return EXIT_OK
+        checks = select_checks(checks, args.group, args.tag)
         if args.workers is not None and args.workers <= 0:
             raise ConfigError("--workers must be positive")
         if args.repeat is not None and args.repeat <= 0:
