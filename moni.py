@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import signal
 import socket
 import history
 import notifier
@@ -89,6 +90,17 @@ def load_config(path: Path) -> list[dict[str, Any]]:
             raise ConfigError(f"checks[{index}].name must be unique")
         names.add(check["name"])
     return checks
+
+
+def reload_config(path: Path, current: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Load a replacement configuration, preserving the active one on error."""
+    try:
+        replacement = load_config(path)
+    except ConfigError as exc:
+        LOGGER.error("configuration reload rejected: %s", exc)
+        return current
+    LOGGER.info("configuration reloaded with %d checks", len(replacement))
+    return replacement
 
 
 def expand_environment(value: Any, path: str = "config") -> Any:
@@ -317,10 +329,21 @@ def main(argv: list[str] | None = None) -> int:
             store = api.StateStore()
             server = api.create_server(args.host, args.port, store)
             stop = threading.Event()
+            checks_lock = threading.Lock()
+            active_checks = checks
+
+            def reload_signal(_signum: int, _frame: Any) -> None:
+                nonlocal active_checks
+                with checks_lock:
+                    active_checks = reload_config(args.config, active_checks)
+
+            signal.signal(signal.SIGHUP, reload_signal)
 
             def refresh() -> None:
                 while not stop.is_set():
-                    results = run_checks(checks, args.workers)
+                    with checks_lock:
+                        scheduled_checks = list(active_checks)
+                    results = run_checks(scheduled_checks, args.workers)
                     store.replace([asdict(item) for item in results])
                     if args.history is not None:
                         history.record_results(args.history, results)

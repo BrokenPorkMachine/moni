@@ -108,8 +108,8 @@ For every workload:
 - v0.2: complete; history inspection, environment references, groups/tags,
   filtering, structured result metadata, diagnostics, and structured logging
   are implemented. v0.3 is next.
-- v0.3: in progress; loopback health/current-check endpoints and bounded
-  SQLite retention are implemented. Reload and authenticated non-loopback
-  access remain.
+- v0.3: in progress; loopback health/current-check endpoints, bounded SQLite
+  retention, and SIGHUP configuration reload are implemented. Authenticated
+  non-loopback access remains.
 - v0.4–v1.0: not started.
 

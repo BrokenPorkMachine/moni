@@ -192,3 +192,17 @@ Added bounded history retention for service mode:
 Validation: `python3 -m unittest discover -s tests -v` passed 31 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed.
+
+## Long-term workload 7 — 2026-10-11
+
+Added graceful configuration reload for service mode:
+
+- `moni serve` now reloads configuration on `SIGHUP` without stopping the API.
+- Reload validation is atomic: invalid replacements are logged and the active
+  configuration remains unchanged.
+- Scheduler snapshots configuration under a lock before each check cycle.
+- Added valid-reload and rejected-reload tests.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 33 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed.

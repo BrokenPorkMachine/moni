@@ -35,6 +35,9 @@ structured results. The service refreshes checks every 30 seconds by default;
 use `--interval SECONDS` to change it. Add `--history PATH --retention ROWS`
 to persist service observations while keeping only the newest bounded number
 of rows.
+Send `SIGHUP` to a running `moni serve` process to reload its JSON
+configuration. A malformed replacement is rejected and the previous active
+configuration continues running.
 
 Exit codes:
 

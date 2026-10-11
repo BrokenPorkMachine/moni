@@ -101,6 +101,18 @@ class MoniTests(unittest.TestCase):
         self.assertIn("MONI_SECRET", str(error.exception))
         self.assertNotIn("super-secret", str(error.exception))
 
+    def test_reload_config_preserves_active_config_on_error(self):
+        current = [{"name": "healthy", "type": "tcp", "host": "localhost", "port": 80}]
+        invalid = self.config({"checks": [{"name": "broken", "type": "udp"}]})
+        with patch.object(moni.LOGGER, "error") as log:
+            self.assertIs(moni.reload_config(invalid, current), current)
+        log.assert_called_once()
+
+    def test_reload_config_replaces_valid_config(self):
+        current = [{"name": "old", "type": "tcp", "host": "localhost", "port": 80}]
+        replacement = self.config({"checks": [{"name": "new", "type": "tcp", "host": "localhost", "port": 81}]})
+        self.assertEqual(moni.reload_config(replacement, current)[0]["name"], "new")
+
     def test_validate_command(self):
         path = self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80}]})
         self.assertEqual(moni.main(["validate", str(path)]), 0)
