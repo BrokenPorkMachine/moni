@@ -121,3 +121,17 @@ Started v0.2 operator ergonomics with a read-only history command:
 
 Validation: `python3 -m unittest discover -s tests -v` passed 22 tests with
 `ResourceWarning` promoted to errors; configuration validation passed.
+
+## Long-term workload 2 — 2026-10-11
+
+Added safe environment-variable references to JSON configuration:
+
+- Supports `${NAME}` for required values.
+- Supports `${NAME:-default}` for optional string values.
+- Expands recursively through objects and arrays before validation.
+- Missing-variable errors identify only the variable name and configuration
+  path; substituted values are never logged.
+- Numeric fields remain JSON numbers in v0.2 and reject string substitution.
+
+Validation: `make smoke` passed and the full suite passed 24 tests with
+`ResourceWarning` promoted to errors.

@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from unittest.mock import MagicMock
 import unittest
@@ -22,6 +23,29 @@ class MoniTests(unittest.TestCase):
     def test_load_config_rejects_invalid_type(self):
         with self.assertRaises(moni.ConfigError):
             moni.load_config(self.config({"checks": [{"name": "x", "type": "udp"}]}))
+
+    def test_environment_references_expand_without_logging_values(self):
+        path = self.config(
+            {"checks": [{"name": "${MONI_NAME}", "type": "http", "url": "${MONI_URL}"}]}
+        )
+        with patch.dict(os.environ, {"MONI_NAME": "private-service", "MONI_URL": "https://internal.test"}, clear=False):
+            checks = moni.load_config(path)
+        self.assertEqual(checks[0]["name"], "private-service")
+        self.assertEqual(checks[0]["url"], "https://internal.test")
+
+    def test_environment_default_and_missing_variable(self):
+        path = self.config(
+            {"checks": [{"name": "health", "type": "http", "url": "https://${MONI_HOST:-example.com}"}]}
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(moni.load_config(path)[0]["url"], "https://example.com")
+            missing = self.config(
+                {"checks": [{"name": "${MONI_SECRET}", "type": "http", "url": "https://example.com"}]}
+            )
+            with self.assertRaises(moni.ConfigError) as error:
+                moni.load_config(missing)
+        self.assertIn("MONI_SECRET", str(error.exception))
+        self.assertNotIn("super-secret", str(error.exception))
 
     def test_validate_command(self):
         path = self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80}]})

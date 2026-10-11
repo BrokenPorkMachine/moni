@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import socket
 import history
 import notifier
@@ -24,6 +26,7 @@ EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_USAGE = 2
 VERSION = "0.1.0"
+ENV_REFERENCE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}")
 
 
 class ConfigError(ValueError):
@@ -45,12 +48,35 @@ def load_config(path: Path) -> list[dict[str, Any]]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ConfigError(f"cannot read config {path}: {exc}") from exc
+    data = expand_environment(data)
     if not isinstance(data, dict) or not isinstance(data.get("checks"), list):
         raise ConfigError("config must be an object with a checks array")
     checks = data["checks"]
     for index, check in enumerate(checks):
         validate_check(check, index)
     return checks
+
+
+def expand_environment(value: Any, path: str = "config") -> Any:
+    """Expand string values using ${NAME} or ${NAME:-default} references."""
+    if isinstance(value, dict):
+        return {key: expand_environment(item, f"{path}.{key}") for key, item in value.items()}
+    if isinstance(value, list):
+        return [expand_environment(item, f"{path}[{index}]") for index, item in enumerate(value)]
+    if not isinstance(value, str):
+        return value
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        default = match.group(3)
+        current = os.environ.get(name)
+        if current is None or (current == "" and default is not None):
+            if default is not None:
+                return default
+            raise ConfigError(f"{path}: environment variable {name} is not set")
+        return current
+
+    return ENV_REFERENCE.sub(replace, value)
 
 
 def validate_check(check: Any, index: int = 0) -> None:

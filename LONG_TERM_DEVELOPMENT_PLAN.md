@@ -105,7 +105,7 @@ For every workload:
 ## Current status
 
 - v0.1: complete and pushed.
-- v0.2: in progress; recent-history inspection is complete, and environment
-  references are next.
+- v0.2: in progress; recent-history inspection and environment references are
+  complete. Tags/groups and structured output are next.
 - v0.3–v1.0: not started.
 

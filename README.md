@@ -42,5 +42,10 @@ backoff; a failed delivery makes a one-shot check return `1`.
 Use `moni history PATH` to inspect recent persisted observations without
 opening SQLite directly; add `--json` for machine-readable output.
 
+String configuration values may reference `${NAME}` or `${NAME:-default}`.
+Unset required variables cause validation to fail with the variable name only;
+Moni never prints the substituted value. Numeric fields remain JSON numbers and
+should not be supplied through environment substitution in v0.2.
+
 See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for scope and delivery gates.
 
