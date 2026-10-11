@@ -1,0 +1,18 @@
+{
+  "checks": [
+    {
+      "name": "Moni website",
+      "type": "http",
+      "url": "https://example.com",
+      "timeout_seconds": 5,
+      "expected_status": 200
+    },
+    {
+      "name": "local database",
+      "type": "tcp",
+      "host": "127.0.0.1",
+      "port": 5432,
+      "timeout_seconds": 1
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Moni: small dependency-free HTTP/TCP service monitor."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import socket
+import sys
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+
+EXIT_OK = 0
+EXIT_FAILED = 1
+EXIT_USAGE = 2
+
+
+class ConfigError(ValueError):
+    """Raised when a Moni configuration is invalid."""
+
+
+@dataclass(frozen=True)
+class CheckResult:
+    name: str
+    type: str
+    ok: bool
+    latency_ms: float | None
+    status: int | None = None
+    error: str | None = None
+
+
+def load_config(path: Path) -> list[dict[str, Any]]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ConfigError(f"cannot read config {path}: {exc}") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("checks"), list):
+        raise ConfigError("config must be an object with a checks array")
+    checks = data["checks"]
+    for index, check in enumerate(checks):
+        validate_check(check, index)
+    return checks
+
+
+def validate_check(check: Any, index: int = 0) -> None:
+    if not isinstance(check, dict):
+        raise ConfigError(f"checks[{index}] must be an object")
+    name = check.get("name")
+    kind = check.get("type")
+    if not isinstance(name, str) or not name.strip():
+        raise ConfigError(f"checks[{index}].name must be a non-empty string")
+    if kind not in {"http", "tcp"}:
+        raise ConfigError(f"checks[{index}].type must be http or tcp")
+    timeout = check.get("timeout_seconds", 5)
+    if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
+        raise ConfigError(f"checks[{index}].timeout_seconds must be positive")
+    if kind == "http":
+        url = check.get("url")
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            raise ConfigError(f"checks[{index}].url must be an HTTP(S) URL")
+        expected = check.get("expected_status", 200)
+        if not isinstance(expected, int) or not 100 <= expected <= 599:
+            raise ConfigError(f"checks[{index}].expected_status must be an HTTP status")
+    else:
+        if not isinstance(check.get("host"), str) or not check["host"]:
+            raise ConfigError(f"checks[{index}].host must be a non-empty string")
+        port = check.get("port")
+        if not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
+            raise ConfigError(f"checks[{index}].port must be between 1 and 65535")
+
+
+def run_http(check: dict[str, Any]) -> CheckResult:
+    started = time.monotonic()
+    name = check["name"]
+    timeout = float(check.get("timeout_seconds", 5))
+    expected = check.get("expected_status", 200)
+    try:
+        request = Request(check["url"], headers={"User-Agent": "Moni/0.1"}, method="GET")
+        with urlopen(request, timeout=timeout) as response:
+            status = response.status
+            response.read(1)
+        ok = status == expected
+        error = None if ok else f"expected HTTP {expected}, got {status}"
+        return result(check, ok, started, status=status, error=error)
+    except HTTPError as exc:
+        status = exc.code
+        error = f"expected HTTP {expected}, got {status}"
+        return result(check, status == expected, started, status=status, error=error)
+    except (OSError, URLError, TimeoutError) as exc:
+        return result(check, False, started, error=str(exc) or exc.__class__.__name__)
+
+
+def run_tcp(check: dict[str, Any]) -> CheckResult:
+    started = time.monotonic()
+    try:
+        with socket.create_connection(
+            (check["host"], check["port"]), timeout=float(check.get("timeout_seconds", 5))
+        ):
+            pass
+        return result(check, True, started)
+    except (OSError, TimeoutError) as exc:
+        return result(check, False, started, error=str(exc) or exc.__class__.__name__)
+
+
+def result(
+    check: dict[str, Any], ok: bool, started: float, *, status: int | None = None, error: str | None = None
+) -> CheckResult:
+    return CheckResult(
+        name=check["name"],
+        type=check["type"],
+        ok=ok,
+        latency_ms=round((time.monotonic() - started) * 1000, 2),
+        status=status,
+        error=error,
+    )
+
+
+def run_check(check: dict[str, Any]) -> CheckResult:
+    return run_http(check) if check["type"] == "http" else run_tcp(check)
+
+
+def run_checks(checks: list[dict[str, Any]], workers: int | None = None) -> list[CheckResult]:
+    if not checks:
+        return []
+    max_workers = workers or min(32, len(checks))
+    results: list[CheckResult | None] = [None] * len(checks)
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="moni") as pool:
+        futures = {pool.submit(run_check, check): index for index, check in enumerate(checks)}
+        for future in as_completed(futures):
+            results[futures[future]] = future.result()
+    return [item for item in results if item is not None]
+
+
+def render(results: list[CheckResult], json_output: bool) -> str:
+    if json_output:
+        return json.dumps([asdict(item) for item in results], indent=2) + "\n"
+    lines = []
+    for item in results:
+        state = "PASS" if item.ok else "FAIL"
+        detail = f" HTTP {item.status}" if item.status is not None else ""
+        if item.error:
+            detail += f" — {item.error}"
+        lines.append(f"{state} {item.name} [{item.type}] {item.latency_ms:.2f} ms{detail}")
+    return "\n".join(lines) + ("\n" if lines else "No checks configured.\n")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="moni", description="Check HTTP and TCP services.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    for command in ("validate", "check"):
+        sub = subparsers.add_parser(command)
+        sub.add_argument("config", type=Path)
+        if command == "check":
+            sub.add_argument("--json", action="store_true", help="emit JSON results")
+            sub.add_argument("--workers", type=int, default=None)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        checks = load_config(args.config)
+        if args.command == "validate":
+            print(f"valid: {len(checks)} checks")
+            return EXIT_OK
+        if args.workers is not None and args.workers <= 0:
+            raise ConfigError("--workers must be positive")
+        results = run_checks(checks, args.workers)
+        sys.stdout.write(render(results, args.json))
+        return EXIT_OK if all(item.ok for item in results) else EXIT_FAILED
+    except ConfigError as exc:
+        print(f"moni: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
