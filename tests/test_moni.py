@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from unittest.mock import MagicMock
 import unittest
 from pathlib import Path
@@ -6,6 +7,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import moni
+import history
 
 
 class MoniTests(unittest.TestCase):
@@ -66,6 +68,37 @@ class MoniTests(unittest.TestCase):
             "moni.time.sleep", side_effect=KeyboardInterrupt
         ):
             self.assertEqual(moni.main(["check", str(path), "--repeat", "1"]), 0)
+
+    def test_history_records_results(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "state" / "history.sqlite"
+        results = [
+            moni.CheckResult("health", "http", True, 12.5, status=200),
+            moni.CheckResult("db", "tcp", False, 5.0, error="refused"),
+        ]
+        history.record_results(path, results, checked_at=123.0)
+        database = sqlite3.connect(path)
+        try:
+            rows = database.execute(
+                "SELECT checked_at, name, ok, status, error FROM observations ORDER BY id"
+            ).fetchall()
+        finally:
+            database.close()
+        self.assertEqual(rows, [(123.0, "health", 1, 200, None), (123.0, "db", 0, None, "refused")])
+
+    def test_check_can_write_history(self):
+        config = self.config({"checks": []})
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        database = Path(directory.name) / "history.sqlite"
+        with patch("moni.run_checks", return_value=[]):
+            self.assertEqual(moni.main(["check", str(config), "--history", str(database)]), 0)
+        connection = sqlite3.connect(database)
+        try:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0], 0)
+        finally:
+            connection.close()
 
     def test_tcp_check_passes_when_connection_succeeds(self):
         connection = MagicMock()

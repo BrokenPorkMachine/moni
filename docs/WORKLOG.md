@@ -50,3 +50,16 @@ Closed the M1/M2 deterministic acceptance gaps:
 
 Validation: `python3 -m unittest discover -s tests -v` passed 11 tests and
 the sample configuration validates successfully.
+
+## Fourth workload — 2026-10-11
+
+Started M3 with optional SQLite observation history:
+
+- Added a versioned `observations` table and index.
+- Added `--history PATH` to one-shot and repeat checks.
+- Stored timestamp, check identity, pass/fail, latency, status, and error.
+- Added parent-directory creation and explicit connection cleanup.
+- Kept persistence disabled unless the operator opts in.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 13 tests with
+`ResourceWarning` promoted to errors; the sample configuration validates.

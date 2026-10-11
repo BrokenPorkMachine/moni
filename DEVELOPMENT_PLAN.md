@@ -87,5 +87,7 @@ Exit gate: reproducible test and release commands pass from a clean checkout.
   mixed-check coverage is present.
 - M2: complete; human-readable output, validation, one-shot checks, repeat
   mode, and graceful interruption are implemented.
-- M3–M4: not started.
+- M3: in progress; optional SQLite observation history is implemented and
+  tested. State transitions and webhook delivery remain.
+- M4: not started.
 

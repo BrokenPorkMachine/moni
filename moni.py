@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import socket
+import history
 import sys
 import threading
 import time
@@ -167,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
                 metavar="SECONDS",
                 help="repeat checks until interrupted",
             )
+            sub.add_argument("--history", type=Path, default=None, metavar="PATH", help="append results to SQLite")
     return parser
 
 
@@ -183,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
             raise ConfigError("--repeat must be positive")
         if args.repeat is None:
             results = run_checks(checks, args.workers)
+            if args.history is not None:
+                history.record_results(args.history, results)
             sys.stdout.write(render(results, args.json))
             return EXIT_OK if all(item.ok for item in results) else EXIT_FAILED
 
@@ -191,6 +195,8 @@ def main(argv: list[str] | None = None) -> int:
             while True:
                 results = run_checks(checks, args.workers)
                 saw_failure = saw_failure or not all(item.ok for item in results)
+                if args.history is not None:
+                    history.record_results(args.history, results)
                 sys.stdout.write(render(results, args.json))
                 sys.stdout.flush()
                 time.sleep(args.repeat)
