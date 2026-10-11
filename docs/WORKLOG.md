@@ -271,3 +271,16 @@ Separated the local execution components behind replaceable contracts:
   changing CLI behavior.
 
 Validation: `make smoke` passed with 42 tests and `git diff --check` passed.
+
+## Long-term workload 13 — 2026-10-11
+
+Closed the documented v0.4 local coordinator exit gate:
+
+- Added per-agent nonce replay protection in addition to report-ID
+  deduplication.
+- Added deterministic coverage for two agents reporting independently and for
+  forged, stale, duplicate-ID, and duplicate-nonce reports.
+- Marked v0.4 complete for the local coordinator scope; durable coordinator
+  storage is explicitly deferred to a later reliability slice.
+
+Validation: `make smoke` passed with 43 tests and `git diff --check` passed.

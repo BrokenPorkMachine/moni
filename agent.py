@@ -70,6 +70,7 @@ class Coordinator:
         self.max_age_seconds = max_age_seconds
         self._reports: dict[str, dict[str, Any]] = {}
         self._accepted_ids: set[str] = set()
+        self._accepted_nonces: set[tuple[str, str]] = set()
 
     def accept(self, report: dict[str, Any], signature: str, *, now: float | None = None) -> None:
         """Verify and accept one report, rejecting replay and forged writes."""
@@ -97,9 +98,10 @@ class Coordinator:
         current = time.time() if now is None else now
         if abs(current - sent_at) > self.max_age_seconds:
             raise ReportError("report is outside the accepted time window")
-        if report_id in self._accepted_ids:
+        if report_id in self._accepted_ids or (name, nonce) in self._accepted_nonces:
             raise ReportError("duplicate report")
         self._accepted_ids.add(report_id)
+        self._accepted_nonces.add((name, nonce))
         self._reports[name] = dict(report)
 
     def snapshot(self) -> list[dict[str, Any]]:

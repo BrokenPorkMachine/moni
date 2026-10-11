@@ -112,9 +112,9 @@ For every workload:
   retention, SIGHUP configuration reload, and authenticated non-loopback
   access are implemented. The v0.3 exit gate is met for the documented local
   service scope.
-- v0.4: in progress; the local agent identity/capability contract, signed
-  replay-protected report ingestion, CLI coordinator wiring, and replaceable
-  scheduler/persistence/notifier boundaries are implemented. Durable
-  coordinator storage and multi-agent scheduling remain.
+- v0.4: complete for the local coordinator scope; named agent identity and
+  capabilities, HMAC-signed freshness-checked reports, report and nonce replay
+  protection, CLI wiring, and replaceable scheduler/persistence/notifier
+  boundaries are implemented. Durable coordinator storage remains deferred.
 - v0.5–v1.0: not started.
 

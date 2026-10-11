@@ -127,8 +127,22 @@ class MoniTests(unittest.TestCase):
         coordinator = agent.Coordinator({"edge-1": "secret"})
         with self.assertRaises(agent.ReportError):
             coordinator.accept(report, agent.sign_report(report, "wrong"), now=100.0)
+
+        coordinator.accept(report, agent.sign_report(report, "secret"), now=100.0)
         with self.assertRaises(agent.ReportError):
-            coordinator.accept(report, agent.sign_report(report, "secret"), now=401.0)
+            stale = dict(report, report_id="stale", nonce="stale")
+            coordinator.accept(stale, agent.sign_report(stale, "secret"), now=401.0)
+
+        replayed = dict(report, report_id="r2")
+        with self.assertRaises(agent.ReportError):
+            coordinator.accept(replayed, agent.sign_report(replayed, "secret"), now=100.0)
+
+    def test_coordinator_accepts_two_agents_and_keeps_reports_distinct(self):
+        coordinator = agent.Coordinator({"edge-1": "secret-1", "edge-2": "secret-2"})
+        for name, secret in (("edge-1", "secret-1"), ("edge-2", "secret-2")):
+            report = agent.create_report(agent.local_agent(name), [], report_id=name, sent_at=100.0, nonce=name)
+            coordinator.accept(report, agent.sign_report(report, secret), now=100.0)
+        self.assertEqual([item["agent"]["name"] for item in coordinator.snapshot()], ["edge-1", "edge-2"])
 
     def test_report_endpoint_accepts_signed_agent_report(self):
         info = agent.local_agent("edge-1")
