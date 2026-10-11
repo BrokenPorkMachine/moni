@@ -11,6 +11,8 @@ python3 moni.py check examples/moni.json
 python3 moni.py check examples/moni.json --json
 python3 moni.py check examples/moni.json --repeat 30
 python3 moni.py check examples/moni.json --history .moni/history.sqlite
+python3 moni.py check examples/moni.json --history .moni/history.sqlite \
+  --webhook https://monitoring.example/hooks/moni
 ```
 
 Exit codes:
@@ -26,8 +28,9 @@ is optional and disabled unless explicitly requested.
 
 The database stores raw observations plus the last-known state for each named
 check. The Python API returns `StateTransition` records when a check changes
-between passing and failing; webhook delivery is planned for the next M3
-slice.
+between passing and failing. Use `--webhook URL` with `--history PATH` to POST
+only state changes. Delivery retries up to three times with exponential
+backoff; a failed delivery makes a one-shot check return `1`.
 
 See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for scope and delivery gates.
 

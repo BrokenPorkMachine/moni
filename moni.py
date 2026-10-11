@@ -7,6 +7,7 @@ import argparse
 import json
 import socket
 import history
+import notifier
 import sys
 import threading
 import time
@@ -169,6 +170,8 @@ def build_parser() -> argparse.ArgumentParser:
                 help="repeat checks until interrupted",
             )
             sub.add_argument("--history", type=Path, default=None, metavar="PATH", help="append results to SQLite")
+            sub.add_argument("--webhook", default=None, metavar="URL", help="POST changed states to a webhook")
+            sub.add_argument("--webhook-attempts", type=int, default=3, metavar="N")
     return parser
 
 
@@ -183,20 +186,34 @@ def main(argv: list[str] | None = None) -> int:
             raise ConfigError("--workers must be positive")
         if args.repeat is not None and args.repeat <= 0:
             raise ConfigError("--repeat must be positive")
+        if args.webhook is not None and args.history is None:
+            raise ConfigError("--webhook requires --history so state survives restarts")
+        if args.webhook_attempts <= 0:
+            raise ConfigError("--webhook-attempts must be positive")
         if args.repeat is None:
             results = run_checks(checks, args.workers)
+            transitions = []
             if args.history is not None:
-                history.record_results(args.history, results)
+                transitions = history.record_results(args.history, results)
+            notification_failed = args.webhook is not None and not notifier.send_transitions(
+                args.webhook, transitions, attempts=args.webhook_attempts
+            )
             sys.stdout.write(render(results, args.json))
-            return EXIT_OK if all(item.ok for item in results) else EXIT_FAILED
+            return EXIT_OK if all(item.ok for item in results) and not notification_failed else EXIT_FAILED
 
         saw_failure = False
         try:
             while True:
                 results = run_checks(checks, args.workers)
                 saw_failure = saw_failure or not all(item.ok for item in results)
+                transitions = []
                 if args.history is not None:
-                    history.record_results(args.history, results)
+                    transitions = history.record_results(args.history, results)
+                if args.webhook is not None and not notifier.send_transitions(
+                    args.webhook, transitions, attempts=args.webhook_attempts
+                ):
+                    saw_failure = True
+                    print("moni: webhook delivery failed", file=sys.stderr)
                 sys.stdout.write(render(results, args.json))
                 sys.stdout.flush()
                 time.sleep(args.repeat)
