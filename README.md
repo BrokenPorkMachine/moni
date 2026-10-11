@@ -16,6 +16,7 @@ python3 moni.py check examples/moni.json --json
 python3 moni.py check examples/moni.json --repeat 30
 python3 moni.py check examples/moni.json --history .moni/history.sqlite
 python3 moni.py history .moni/history.sqlite --limit 20
+python3 moni.py history .moni/history.sqlite --summary --json
 python3 moni.py history .moni/history.sqlite --json
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni
@@ -70,7 +71,9 @@ only state changes. Delivery retries up to three times with exponential
 backoff; a failed delivery makes a one-shot check return `1`.
 
 Use `moni history PATH` to inspect recent persisted observations without
-opening SQLite directly; add `--json` for machine-readable output.
+opening SQLite directly; add `--json` for machine-readable output. Use
+`--summary` to aggregate all observations by check with pass rate and average
+latency.
 
 String configuration values may reference `${NAME}` or `${NAME:-default}`.
 Unset required variables cause validation to fail with the variable name only;

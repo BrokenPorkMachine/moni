@@ -284,3 +284,15 @@ Closed the documented v0.4 local coordinator exit gate:
   storage is explicitly deferred to a later reliability slice.
 
 Validation: `make smoke` passed with 43 tests and `git diff --check` passed.
+
+## Long-term workload 14 — 2026-10-11
+
+Started v0.5 reliability reporting:
+
+- Added all-time per-check observation summaries with pass/fail counts,
+  success rate, and average latency.
+- Added `moni history PATH --summary` with human-readable and JSON output.
+- Kept summary reads read-only and covered the aggregation and CLI export
+  contract with offline tests.
+
+Validation: `make smoke` passed with 45 tests and `git diff --check` passed.

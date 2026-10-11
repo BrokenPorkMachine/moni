@@ -292,6 +292,27 @@ class MoniTests(unittest.TestCase):
         self.assertEqual(rows[0]["name"], "new")
         self.assertFalse(rows[0]["ok"])
 
+    def test_history_summary_aggregates_success_and_latency(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        history.record_results(path, [moni.CheckResult("health", "http", True, 10.0)], checked_at=1.0)
+        history.record_results(path, [moni.CheckResult("health", "http", False, 20.0)], checked_at=2.0)
+        summary = history.summarize_observations(path)
+        self.assertEqual(summary[0]["observations"], 2)
+        self.assertEqual(summary[0]["passed"], 1)
+        self.assertEqual(summary[0]["failed"], 1)
+        self.assertEqual(summary[0]["average_latency_ms"], 15.0)
+
+    def test_history_summary_command_supports_json(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        history.record_results(path, [moni.CheckResult("health", "http", True, 4.0)], checked_at=10.0)
+        with patch("sys.stdout.write") as write:
+            self.assertEqual(moni.main(["history", str(path), "--summary", "--json"]), 0)
+        self.assertIn('"success_rate": 1.0', write.call_args.args[0])
+
     def test_prune_history_keeps_newest_rows(self):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)

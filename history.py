@@ -149,6 +149,37 @@ def recent_observations(path: Path, limit: int = 20) -> list[dict[str, Any]]:
     ]
 
 
+def summarize_observations(path: Path) -> list[dict[str, Any]]:
+    """Return all-time per-check success, failure, and latency summaries."""
+    try:
+        database = sqlite3.connect(path)
+        try:
+            rows = database.execute(
+                """
+                SELECT name, type, COUNT(*), SUM(ok), AVG(latency_ms)
+                FROM observations
+                GROUP BY name, type
+                ORDER BY name
+                """
+            ).fetchall()
+        finally:
+            database.close()
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot read history {path}: {exc}") from exc
+    return [
+        {
+            "name": row[0],
+            "type": row[1],
+            "observations": row[2],
+            "passed": row[3],
+            "failed": row[2] - row[3],
+            "success_rate": round(row[3] / row[2], 4),
+            "average_latency_ms": None if row[4] is None else round(row[4], 2),
+        }
+        for row in rows
+    ]
+
+
 def prune_observations(path: Path, max_rows: int) -> int:
     """Keep the newest observation rows and return the number removed."""
     if max_rows <= 0:

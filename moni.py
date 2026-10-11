@@ -274,6 +274,18 @@ def render_history(rows: list[dict[str, Any]], json_output: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_summary(rows: list[dict[str, Any]], json_output: bool) -> str:
+    if json_output:
+        return json.dumps(rows, indent=2) + "\n"
+    if not rows:
+        return "No observations.\n"
+    return "".join(
+        f"{row['name']} [{row['type']}] {row['success_rate']:.2%} pass, "
+        f"{row['average_latency_ms']:.2f} ms average ({row['observations']} observations)\n"
+        for row in rows
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="moni", description="Check HTTP and TCP services.")
     parser.add_argument("--version", action="version", version=f"moni {VERSION}")
@@ -302,6 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
     history_parser.add_argument("path", type=Path)
     history_parser.add_argument("--limit", type=int, default=20)
     history_parser.add_argument("--json", action="store_true", help="emit JSON rows")
+    history_parser.add_argument("--summary", action="store_true", help="aggregate all observations by check")
     serve_parser = subparsers.add_parser("serve", help="serve current check state over loopback HTTP")
     serve_parser.add_argument("config", type=Path)
     serve_parser.add_argument("--host", default="127.0.0.1")
@@ -327,8 +340,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "history":
             if args.limit <= 0:
                 raise ConfigError("--limit must be positive")
-            rows = history.recent_observations(args.path, args.limit)
-            sys.stdout.write(render_history(rows, args.json))
+            if args.summary:
+                rows = history.summarize_observations(args.path)
+                sys.stdout.write(render_summary(rows, args.json))
+            else:
+                rows = history.recent_observations(args.path, args.limit)
+                sys.stdout.write(render_history(rows, args.json))
             return EXIT_OK
         checks = load_config(args.config)
         if args.command == "validate":
