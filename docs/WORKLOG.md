@@ -246,3 +246,16 @@ Implemented the first authenticated v0.4 transport slice:
   still pending.
 
 Validation: `make smoke` passed with 38 tests and `git diff --check` passed.
+
+## Long-term workload 11 — 2026-10-11
+
+Wired the authenticated coordinator into service mode:
+
+- Added repeatable `serve --agent-secret NAME=ENV_VAR` configuration so shared
+  secrets are loaded from the environment instead of command-line values.
+- Added authenticated `POST /reports` and `GET /agents` service integration;
+  local `/health` and `/checks` behavior remains unchanged.
+- Added validation for missing and duplicate agent-secret references and
+  endpoint coverage for coordinator snapshots.
+
+Validation: `make smoke` passed with 40 tests and `git diff --check` passed.

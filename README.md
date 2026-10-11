@@ -47,8 +47,10 @@ multi-agent service mode. Agents create canonical JSON reports and sign them
 with an HMAC-SHA256 shared secret; the coordinator rejects unknown agents,
 forged signatures, stale reports, and duplicate report IDs. Reports are
 accepted at `POST /reports` when a server is created with an `agent.Coordinator`.
-The existing CLI remains single-agent mode until coordinator configuration is
-added.
+Enable it from the CLI with `moni serve config.json --agent-secret
+edge-1=MONI_EDGE_SECRET`, where the secret is read from the named environment
+variable rather than a command-line value. Accepted reports are visible at
+`GET /agents`; the existing local check endpoints remain unchanged.
 
 Exit codes:
 

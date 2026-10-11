@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import api
+import agent
 import json
 import logging
 import os
@@ -236,6 +237,22 @@ def select_checks(
     ]
 
 
+def parse_agent_secrets(values: list[str]) -> dict[str, str]:
+    """Resolve serve's NAME=ENV_VAR entries without putting secrets in argv."""
+    secrets: dict[str, str] = {}
+    for value in values:
+        name, separator, environment_name = value.partition("=")
+        if not separator or not name.strip() or not environment_name.strip():
+            raise ConfigError("--agent-secret must use NAME=ENV_VAR")
+        if name in secrets:
+            raise ConfigError(f"duplicate --agent-secret for agent {name}")
+        secret = os.environ.get(environment_name)
+        if not secret:
+            raise ConfigError(f"agent secret environment variable {environment_name} is not set")
+        secrets[name] = secret
+    return secrets
+
+
 def render(results: list[CheckResult], json_output: bool) -> str:
     if json_output:
         return json.dumps([asdict(item) for item in results], indent=2) + "\n"
@@ -302,6 +319,13 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--history", type=Path, default=None, metavar="PATH")
     serve_parser.add_argument("--retention", type=int, default=None, metavar="ROWS")
     serve_parser.add_argument("--auth-token", default=None, help="Bearer token for non-loopback API access")
+    serve_parser.add_argument(
+        "--agent-secret",
+        action="append",
+        default=[],
+        metavar="NAME=ENV_VAR",
+        help="enable signed agent reports using a secret loaded from ENV_VAR",
+    )
     return parser
 
 
@@ -327,8 +351,10 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError("--retention must be positive")
             if args.workers is not None and args.workers <= 0:
                 raise ConfigError("--workers must be positive")
+            secrets = parse_agent_secrets(args.agent_secret)
             store = api.StateStore()
-            server = api.create_server(args.host, args.port, store, args.auth_token)
+            coordinator = agent.Coordinator(secrets) if secrets else None
+            server = api.create_server(args.host, args.port, store, args.auth_token, coordinator)
             stop = threading.Event()
             checks_lock = threading.Lock()
             active_checks = checks

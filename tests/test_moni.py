@@ -102,6 +102,14 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             agent.local_agent(" ")
 
+    def test_agent_secret_references_environment(self):
+        with patch.dict(os.environ, {"MONI_EDGE_SECRET": "secret"}, clear=True):
+            self.assertEqual(moni.parse_agent_secrets(["edge-1=MONI_EDGE_SECRET"]), {"edge-1": "secret"})
+        with self.assertRaises(moni.ConfigError):
+            moni.parse_agent_secrets(["edge-1=UNSET"])
+        with self.assertRaises(moni.ConfigError):
+            moni.parse_agent_secrets(["edge-1=MONI_EDGE_SECRET", "edge-1=MONI_EDGE_SECRET"])
+
     def test_agent_report_signature_and_replay_protection(self):
         info = agent.local_agent("edge-1")
         report = agent.create_report(info, [{"name": "health", "ok": True}], report_id="r1", sent_at=100.0, nonce="n1")
@@ -138,6 +146,23 @@ class MoniTests(unittest.TestCase):
         with patch("agent.time.time", return_value=100.0):
             handler.do_POST()
         self.assertEqual(handler.send_response.call_args.args[0], 202)
+
+    def test_agents_endpoint_exposes_coordinator_reports(self):
+        info = agent.local_agent("edge-1")
+        report = agent.create_report(info, [], report_id="r1", sent_at=100.0, nonce="n1")
+        coordinator = agent.Coordinator({"edge-1": "secret"})
+        coordinator.accept(report, agent.sign_report(report, "secret"), now=100.0)
+        handler_type = api.make_handler(api.StateStore(), coordinator=coordinator)
+        handler = handler_type.__new__(handler_type)
+        handler.path = "/agents"
+        handler.headers = {}
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        handler.wfile = MagicMock()
+        handler.do_GET()
+        payload = json.loads(handler.wfile.write.call_args.args[0])
+        self.assertEqual(payload["agents"][0]["agent"]["name"], "edge-1")
 
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(

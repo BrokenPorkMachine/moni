@@ -45,6 +45,8 @@ def make_handler(
                 self._send(200, payload)
             elif path == "/checks":
                 self._send(200, {"checks": results})
+            elif path == "/agents" and coordinator is not None:
+                self._send(200, {"agents": coordinator.snapshot()})
             else:
                 self._send(404, {"error": "not found"})
 
