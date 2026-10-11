@@ -15,6 +15,8 @@ python3 moni.py check examples/moni.json
 python3 moni.py check examples/moni.json --json
 python3 moni.py check examples/moni.json --repeat 30
 python3 moni.py check examples/moni.json --history .moni/history.sqlite
+python3 moni.py history .moni/history.sqlite --limit 20
+python3 moni.py history .moni/history.sqlite --json
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni
 moni --version
@@ -36,6 +38,9 @@ check. The Python API returns `StateTransition` records when a check changes
 between passing and failing. Use `--webhook URL` with `--history PATH` to POST
 only state changes. Delivery retries up to three times with exponential
 backoff; a failed delivery makes a one-shot check return `1`.
+
+Use `moni history PATH` to inspect recent persisted observations without
+opening SQLite directly; add `--json` for machine-readable output.
 
 See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for scope and delivery gates.
 

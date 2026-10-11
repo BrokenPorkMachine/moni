@@ -109,3 +109,15 @@ python3 -m unittest discover -s tests -v       20 passed
 ```
 
 Moni v0.1 is complete against the development-plan scope.
+
+## Long-term workload 1 — 2026-10-11
+
+Started v0.2 operator ergonomics with a read-only history command:
+
+- Added `moni history PATH` with human-readable and JSON output.
+- Added newest-first ordering and positive `--limit` validation.
+- Converted missing or invalid SQLite history into exit code `2` diagnostics.
+- Kept the command read-only; it never changes observations or state.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 22 tests with
+`ResourceWarning` promoted to errors; configuration validation passed.

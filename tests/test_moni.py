@@ -91,6 +91,26 @@ class MoniTests(unittest.TestCase):
             database.close()
         self.assertEqual(rows, [(123.0, "health", 1, 200, None), (123.0, "db", 0, None, "refused")])
 
+    def test_recent_history_is_newest_first(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        history.record_results(path, [moni.CheckResult("old", "tcp", True, 1.0)], checked_at=10.0)
+        history.record_results(path, [moni.CheckResult("new", "tcp", False, 2.0)], checked_at=20.0)
+        rows = history.recent_observations(path, 1)
+        self.assertEqual(rows[0]["name"], "new")
+        self.assertFalse(rows[0]["ok"])
+
+    def test_history_command_supports_json_and_limit_validation(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        history.record_results(path, [moni.CheckResult("health", "http", True, 4.0)], checked_at=10.0)
+        with patch("sys.stdout.write") as write:
+            self.assertEqual(moni.main(["history", str(path), "--json"]), 0)
+        self.assertIn('"name": "health"', write.call_args.args[0])
+        self.assertEqual(moni.main(["history", str(path), "--limit", "0"]), 2)
+
     def test_history_returns_initial_and_changed_state_transitions(self):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)

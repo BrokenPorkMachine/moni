@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import time
 from dataclasses import dataclass
+from typing import Any
 from pathlib import Path
 
 from typing import TYPE_CHECKING
@@ -112,3 +113,37 @@ def record_results(
     except sqlite3.Error as exc:
         raise RuntimeError(f"cannot write history {path}: {exc}") from exc
     return transitions
+
+
+def recent_observations(path: Path, limit: int = 20) -> list[dict[str, Any]]:
+    """Return recent observations in newest-first order without mutating the DB."""
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+    try:
+        database = sqlite3.connect(path)
+        try:
+            rows = database.execute(
+                """
+                SELECT checked_at, name, type, ok, latency_ms, status, error
+                FROM observations
+                ORDER BY checked_at DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        finally:
+            database.close()
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot read history {path}: {exc}") from exc
+    return [
+        {
+            "checked_at": row[0],
+            "name": row[1],
+            "type": row[2],
+            "ok": bool(row[3]),
+            "latency_ms": row[4],
+            "status": row[5],
+            "error": row[6],
+        }
+        for row in rows
+    ]

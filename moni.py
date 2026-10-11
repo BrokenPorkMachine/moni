@@ -11,6 +11,7 @@ import notifier
 import sys
 import threading
 import time
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -154,6 +155,22 @@ def render(results: list[CheckResult], json_output: bool) -> str:
     return "\n".join(lines) + ("\n" if lines else "No checks configured.\n")
 
 
+def render_history(rows: list[dict[str, Any]], json_output: bool) -> str:
+    if json_output:
+        return json.dumps(rows, indent=2) + "\n"
+    if not rows:
+        return "No observations.\n"
+    lines = []
+    for row in rows:
+        state = "PASS" if row["ok"] else "FAIL"
+        checked_at = datetime.fromtimestamp(row["checked_at"], timezone.utc).isoformat()
+        detail = f" HTTP {row['status']}" if row["status"] is not None else ""
+        if row["error"]:
+            detail += f" — {row['error']}"
+        lines.append(f"{checked_at} {state} {row['name']} [{row['type']}] {row['latency_ms']:.2f} ms{detail}")
+    return "\n".join(lines) + "\n"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="moni", description="Check HTTP and TCP services.")
     parser.add_argument("--version", action="version", version=f"moni {VERSION}")
@@ -174,12 +191,22 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--history", type=Path, default=None, metavar="PATH", help="append results to SQLite")
             sub.add_argument("--webhook", default=None, metavar="URL", help="POST changed states to a webhook")
             sub.add_argument("--webhook-attempts", type=int, default=3, metavar="N")
+    history_parser = subparsers.add_parser("history", help="inspect stored observations")
+    history_parser.add_argument("path", type=Path)
+    history_parser.add_argument("--limit", type=int, default=20)
+    history_parser.add_argument("--json", action="store_true", help="emit JSON rows")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "history":
+            if args.limit <= 0:
+                raise ConfigError("--limit must be positive")
+            rows = history.recent_observations(args.path, args.limit)
+            sys.stdout.write(render_history(rows, args.json))
+            return EXIT_OK
         checks = load_config(args.config)
         if args.command == "validate":
             print(f"valid: {len(checks)} checks")
@@ -224,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             print("moni: stopped", file=sys.stderr)
             return EXIT_FAILED if saw_failure else EXIT_OK
-    except ConfigError as exc:
+    except (ConfigError, RuntimeError) as exc:
         print(f"moni: {exc}", file=sys.stderr)
         return EXIT_USAGE
 
