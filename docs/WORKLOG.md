@@ -25,3 +25,15 @@ network access and local socket operations are unavailable; deterministic
 network behavior is covered with mocks. The next workload is M1 hardening:
 CLI error-path tests, repeat mode, and a local test server in environments
 that permit socket binding.
+
+## Second workload — 2026-10-11
+
+Implemented the repeat-mode operator workflow and hardened CLI validation:
+
+- `check --repeat SECONDS` runs until Ctrl-C.
+- Repeated checks continue after failures and report a failure exit status when
+  interrupted after any failed cycle.
+- Invalid worker and repeat values return usage exit code `2`.
+- README documents continuous operation.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 7 tests.

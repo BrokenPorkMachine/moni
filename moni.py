@@ -160,6 +160,13 @@ def build_parser() -> argparse.ArgumentParser:
         if command == "check":
             sub.add_argument("--json", action="store_true", help="emit JSON results")
             sub.add_argument("--workers", type=int, default=None)
+            sub.add_argument(
+                "--repeat",
+                type=float,
+                default=None,
+                metavar="SECONDS",
+                help="repeat checks until interrupted",
+            )
     return parser
 
 
@@ -172,9 +179,24 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_OK
         if args.workers is not None and args.workers <= 0:
             raise ConfigError("--workers must be positive")
-        results = run_checks(checks, args.workers)
-        sys.stdout.write(render(results, args.json))
-        return EXIT_OK if all(item.ok for item in results) else EXIT_FAILED
+        if args.repeat is not None and args.repeat <= 0:
+            raise ConfigError("--repeat must be positive")
+        if args.repeat is None:
+            results = run_checks(checks, args.workers)
+            sys.stdout.write(render(results, args.json))
+            return EXIT_OK if all(item.ok for item in results) else EXIT_FAILED
+
+        saw_failure = False
+        try:
+            while True:
+                results = run_checks(checks, args.workers)
+                saw_failure = saw_failure or not all(item.ok for item in results)
+                sys.stdout.write(render(results, args.json))
+                sys.stdout.flush()
+                time.sleep(args.repeat)
+        except KeyboardInterrupt:
+            print("moni: stopped", file=sys.stderr)
+            return EXIT_FAILED if saw_failure else EXIT_OK
     except ConfigError as exc:
         print(f"moni: {exc}", file=sys.stderr)
         return EXIT_USAGE

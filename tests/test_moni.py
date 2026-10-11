@@ -58,6 +58,11 @@ class MoniTests(unittest.TestCase):
             results = moni.run_checks(checks)
         self.assertEqual([item.name for item in results], ["first", "second"])
 
+    def test_invalid_worker_and_repeat_values_are_usage_errors(self):
+        path = self.config({"checks": []})
+        self.assertEqual(moni.main(["check", str(path), "--workers", "0"]), 2)
+        self.assertEqual(moni.main(["check", str(path), "--repeat", "0"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
