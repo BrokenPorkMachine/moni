@@ -18,6 +18,7 @@ python3 moni.py check examples/moni.json --history .moni/history.sqlite
 python3 moni.py history .moni/history.sqlite --limit 20
 python3 moni.py history .moni/history.sqlite --summary --json
 python3 moni.py history .moni/history.sqlite --json
+python3 moni.py migrate examples/moni.json --output .moni/moni-v1.json
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
@@ -87,6 +88,9 @@ Use `moni history PATH` to inspect recent persisted observations without
 opening SQLite directly; add `--json` for machine-readable output. Use
 `--summary` to aggregate all observations by check with pass rate and average
 latency.
+
+Use `moni migrate PATH` to print a normalized version-1 configuration, or add
+`--output PATH` to write it without modifying the source file.
 
 String configuration values may reference `${NAME}` or `${NAME:-default}`.
 Unset required variables cause validation to fail with the variable name only;

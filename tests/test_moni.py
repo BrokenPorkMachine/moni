@@ -27,6 +27,15 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(moni.ConfigError):
             moni.load_config(self.config({"checks": [{"name": "x", "type": "udp"}]}))
 
+    def test_migrate_adds_explicit_version_without_expanding_values(self):
+        source = self.config({"checks": [], "metadata": {"owner": "${OWNER}"}})
+        migrated = moni.migrate_config(source)
+        self.assertEqual(migrated["version"], 1)
+        self.assertEqual(migrated["metadata"]["owner"], "${OWNER}")
+        output = source.with_name("migrated.json")
+        self.assertEqual(moni.main(["migrate", str(source), "--output", str(output)]), 0)
+        self.assertEqual(json.loads(output.read_text())["version"], 1)
+
     def test_check_metadata_and_duplicate_validation(self):
         checks = moni.load_config(
             self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80,

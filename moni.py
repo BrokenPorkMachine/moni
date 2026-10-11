@@ -93,6 +93,22 @@ def load_config(path: Path) -> list[dict[str, Any]]:
     return checks
 
 
+def migrate_config(path: Path) -> dict[str, Any]:
+    """Normalize a legacy checks document without expanding or leaking values."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ConfigError(f"cannot read config {path}: {exc}") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("checks"), list):
+        raise ConfigError("config must be an object with a checks array")
+    version = data.get("version", 1)
+    if version != 1:
+        raise ConfigError("only configuration version 1 is supported")
+    migrated = dict(data)
+    migrated["version"] = 1
+    return migrated
+
+
 def reload_config(path: Path, current: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Load a replacement configuration, preserving the active one on error."""
     try:
@@ -356,6 +372,9 @@ def build_parser() -> argparse.ArgumentParser:
     history_parser.add_argument("--limit", type=int, default=20)
     history_parser.add_argument("--json", action="store_true", help="emit JSON rows")
     history_parser.add_argument("--summary", action="store_true", help="aggregate all observations by check")
+    migrate_parser = subparsers.add_parser("migrate", help="normalize a configuration document")
+    migrate_parser.add_argument("config", type=Path)
+    migrate_parser.add_argument("--output", type=Path, default=None, metavar="PATH")
     serve_parser = subparsers.add_parser("serve", help="serve current check state over loopback HTTP")
     serve_parser.add_argument("config", type=Path)
     serve_parser.add_argument("--host", default="127.0.0.1")
@@ -387,6 +406,14 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 rows = history.recent_observations(args.path, args.limit)
                 sys.stdout.write(render_history(rows, args.json))
+            return EXIT_OK
+        if args.command == "migrate":
+            migrated = migrate_config(args.config)
+            encoded = json.dumps(migrated, indent=2) + "\n"
+            if args.output is None:
+                sys.stdout.write(encoded)
+            else:
+                args.output.write_text(encoded, encoding="utf-8")
             return EXIT_OK
         checks = load_config(args.config)
         if args.command == "validate":

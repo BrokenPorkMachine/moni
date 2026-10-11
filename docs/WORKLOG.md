@@ -333,3 +333,15 @@ Added durable notification delivery history:
 - Kept delivery persistence opt-in with the existing `--history` requirement.
 
 Validation: `make smoke` passed with 49 tests and `git diff --check` passed.
+
+## Long-term workload 18 — 2026-10-11
+
+Completed the v0.5 reliability and integrations scope:
+
+- Added `moni migrate PATH [--output PATH]` to normalize legacy configuration
+  documents to explicit version 1 without modifying the source by default.
+- Preserved environment references verbatim during migration so secrets are
+  not expanded or printed.
+- Advanced the roadmap to v0.5 complete.
+
+Validation: `make smoke` passed with 50 tests and `git diff --check` passed.

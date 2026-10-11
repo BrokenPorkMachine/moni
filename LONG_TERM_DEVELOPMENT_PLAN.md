@@ -116,9 +116,9 @@ For every workload:
   capabilities, HMAC-signed freshness-checked reports, report and nonce replay
   protection, CLI wiring, and replaceable scheduler/persistence/notifier
   boundaries are implemented. Durable coordinator storage remains deferred.
-- v0.5: in progress; persisted latency/success summaries, JSON export, named
-  notification silences, local-clock maintenance windows, and durable pending
-  notification delivery history are implemented. Configuration migration
-  remains.
+- v0.5: complete; persisted latency/success summaries, JSON export, named
+  notification silences, local-clock maintenance windows, durable pending
+  notification delivery history, and conservative configuration migration are
+  implemented.
 - v0.6–v1.0: not started.
 
