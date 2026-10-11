@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import moni
+import api
 import history
 import notifier
 
@@ -55,6 +56,27 @@ class MoniTests(unittest.TestCase):
         encoded = json.loads(moni.JsonLogFormatter().format(record))
         self.assertEqual(encoded["level"], "info")
         self.assertEqual(encoded["message"], "selected 2 checks")
+
+    def test_api_health_and_checks_endpoints(self):
+        store = api.StateStore()
+        store.replace([{"name": "health", "ok": True}, {"name": "db", "ok": False}])
+        handler_type = api.make_handler(store)
+        handler = handler_type.__new__(handler_type)
+        handler.path = "/health"
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        handler.wfile = MagicMock()
+        handler.do_GET()
+        payload = json.loads(handler.wfile.write.call_args.args[0])
+        self.assertEqual(payload, {"checks": 2, "ok": False})
+        handler.path = "/checks"
+        handler.do_GET()
+        self.assertEqual(len(json.loads(handler.wfile.write.call_args.args[0])["checks"]), 2)
+
+    def test_api_rejects_non_loopback_host(self):
+        with self.assertRaises(ValueError):
+            api.create_server("0.0.0.0", 0, api.StateStore())
 
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(

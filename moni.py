@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import api
 import json
 import logging
 import os
@@ -280,6 +281,12 @@ def build_parser() -> argparse.ArgumentParser:
     history_parser.add_argument("path", type=Path)
     history_parser.add_argument("--limit", type=int, default=20)
     history_parser.add_argument("--json", action="store_true", help="emit JSON rows")
+    serve_parser = subparsers.add_parser("serve", help="serve current check state over loopback HTTP")
+    serve_parser.add_argument("config", type=Path)
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8765)
+    serve_parser.add_argument("--interval", type=float, default=30.0, metavar="SECONDS")
+    serve_parser.add_argument("--workers", type=int, default=None)
     return parser
 
 
@@ -295,6 +302,34 @@ def main(argv: list[str] | None = None) -> int:
         checks = load_config(args.config)
         if args.command == "validate":
             print(f"valid: {len(checks)} checks")
+            return EXIT_OK
+        if args.command == "serve":
+            if args.port <= 0 or args.port > 65535:
+                raise ConfigError("--port must be between 1 and 65535")
+            if args.interval <= 0:
+                raise ConfigError("--interval must be positive")
+            if args.workers is not None and args.workers <= 0:
+                raise ConfigError("--workers must be positive")
+            store = api.StateStore()
+            server = api.create_server(args.host, args.port, store)
+            stop = threading.Event()
+
+            def refresh() -> None:
+                while not stop.is_set():
+                    results = run_checks(checks, args.workers)
+                    store.replace([asdict(item) for item in results])
+                    stop.wait(args.interval)
+
+            worker = threading.Thread(target=refresh, name="moni-scheduler", daemon=True)
+            worker.start()
+            LOGGER.info("serving Moni API on %s:%d", args.host, args.port)
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                LOGGER.info("stopping Moni API")
+            finally:
+                stop.set()
+                server.server_close()
             return EXIT_OK
         configure_logging(args.log_level, args.log_format)
         original_count = len(checks)
@@ -342,7 +377,7 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             print("moni: stopped", file=sys.stderr)
             return EXIT_FAILED if saw_failure else EXIT_OK
-    except (ConfigError, RuntimeError) as exc:
+    except (ConfigError, RuntimeError, ValueError) as exc:
         print(f"moni: {exc}", file=sys.stderr)
         return EXIT_USAGE
 

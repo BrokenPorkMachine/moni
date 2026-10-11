@@ -108,5 +108,8 @@ For every workload:
 - v0.2: complete; history inspection, environment references, groups/tags,
   filtering, structured result metadata, diagnostics, and structured logging
   are implemented. v0.3 is next.
-- v0.3–v1.0: not started.
+- v0.3: in progress; loopback health and current-check HTTP endpoints are
+  implemented. Reload, retention, and authenticated non-loopback access
+  remain.
+- v0.4–v1.0: not started.
 

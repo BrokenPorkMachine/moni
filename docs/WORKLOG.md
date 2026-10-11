@@ -163,3 +163,19 @@ Completed the v0.2 diagnostics and structured-logging slice:
 Validation: `python3 -m unittest discover -s tests -v` passed 28 tests with
 `ResourceWarning` promoted to errors; `make smoke`, `git diff --check`, and a
 filtered JSON/logging smoke invocation also passed.
+
+## Long-term workload 5 — 2026-10-11
+
+Started v0.3 local service mode:
+
+- Added a dependency-free foreground `serve` command with a background check
+  scheduler.
+- Added loopback-only `GET /health` and `GET /checks` JSON endpoints.
+- Added synchronized state snapshots and explicit refusal of non-loopback
+  binds until authentication exists.
+- Added endpoint and host-safety tests.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 30 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed. Socket binding was not attempted because this sandbox denies local
+socket operations; handler-level endpoint coverage passed.

@@ -29,6 +29,11 @@ Use `--log-level info --log-format json` for structured diagnostic records on
 stderr; diagnostic records never include endpoint values or substituted
 environment values.
 
+Run `moni serve examples/moni.json` to expose a loopback-only API. `GET
+/health` reports aggregate status and `GET /checks` returns the latest
+structured results. The service refreshes checks every 30 seconds by default;
+use `--interval SECONDS` to change it.
+
 Exit codes:
 
 - `0`: every check passed.
