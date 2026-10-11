@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import moni
 import api
+import agent
 import history
 import notifier
 
@@ -90,6 +91,16 @@ class MoniTests(unittest.TestCase):
         handler.wfile = MagicMock()
         handler.do_GET()
         self.assertEqual(handler.send_response.call_args.args[0], 401)
+
+    def test_local_agent_reports_stable_capabilities(self):
+        info = agent.local_agent("edge-1")
+        self.assertEqual(info.as_dict(), {
+            "name": "edge-1",
+            "version": "0.1.0",
+            "capabilities": ["http", "tcp", "history", "webhook"],
+        })
+        with self.assertRaises(ValueError):
+            agent.local_agent(" ")
 
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(

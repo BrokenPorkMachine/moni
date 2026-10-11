@@ -112,6 +112,7 @@ For every workload:
   retention, SIGHUP configuration reload, and authenticated non-loopback
   access are implemented. The v0.3 exit gate is met for the documented local
   service scope.
-- v0.4: next; agent model not started.
+- v0.4: in progress; the local agent identity/capability contract is defined.
+  Scheduler/executor interfaces and authenticated agent transport remain.
 - v0.5–v1.0: not started.
 

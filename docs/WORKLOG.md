@@ -151,6 +151,18 @@ Validation: `python3 -m unittest discover -s tests -v` passed 27 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed.
 
+## Long-term workload 9 — 2026-10-11
+
+Started v0.4 agent architecture:
+
+- Added immutable `AgentInfo` identity and capability records.
+- Added a validated local-agent factory for future coordinator reporting.
+- Kept the existing single-agent CLI behavior unchanged.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 35 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed.
+
 ## Long-term workload 4 — 2026-10-11
 
 Completed the v0.2 diagnostics and structured-logging slice:
