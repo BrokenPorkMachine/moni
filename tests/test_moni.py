@@ -50,6 +50,12 @@ class MoniTests(unittest.TestCase):
         self.assertEqual(encoded[0]["group"], "ops")
         self.assertEqual(encoded[0]["tags"], ["critical"])
 
+    def test_json_log_formatter_is_structured(self):
+        record = moni.logging.LogRecord("moni", moni.logging.INFO, __file__, 1, "selected %d checks", (2,), None)
+        encoded = json.loads(moni.JsonLogFormatter().format(record))
+        self.assertEqual(encoded["level"], "info")
+        self.assertEqual(encoded["message"], "selected 2 checks")
+
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(
             {"checks": [{"name": "${MONI_NAME}", "type": "http", "url": "${MONI_URL}"}]}

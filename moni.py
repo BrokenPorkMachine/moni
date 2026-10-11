@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import socket
@@ -27,10 +28,36 @@ EXIT_FAILED = 1
 EXIT_USAGE = 2
 VERSION = "0.1.0"
 ENV_REFERENCE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}")
+LOGGER = logging.getLogger("moni")
 
 
 class ConfigError(ValueError):
     """Raised when a Moni configuration is invalid."""
+
+
+class JsonLogFormatter(logging.Formatter):
+    """Render diagnostic records as one machine-readable object per line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "level": record.levelname.lower(),
+                "message": record.getMessage(),
+            }
+        )
+
+
+def configure_logging(level: str, log_format: str) -> None:
+    handler = logging.StreamHandler()
+    if log_format == "json":
+        handler.setFormatter(JsonLogFormatter())
+    else:
+        handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+    LOGGER.handlers.clear()
+    LOGGER.addHandler(handler)
+    LOGGER.setLevel(getattr(logging, level.upper()))
+    LOGGER.propagate = False
 
 
 @dataclass(frozen=True)
@@ -247,6 +274,8 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--webhook-attempts", type=int, default=3, metavar="N")
             sub.add_argument("--group", default=None, help="run only checks in this group")
             sub.add_argument("--tag", action="append", default=[], help="run checks containing this tag")
+            sub.add_argument("--log-level", choices=("debug", "info", "warning"), default="warning")
+            sub.add_argument("--log-format", choices=("text", "json"), default="text")
     history_parser = subparsers.add_parser("history", help="inspect stored observations")
     history_parser.add_argument("path", type=Path)
     history_parser.add_argument("--limit", type=int, default=20)
@@ -267,7 +296,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "validate":
             print(f"valid: {len(checks)} checks")
             return EXIT_OK
+        configure_logging(args.log_level, args.log_format)
+        original_count = len(checks)
         checks = select_checks(checks, args.group, args.tag)
+        LOGGER.info("selected %d of %d configured checks", len(checks), original_count)
         if args.workers is not None and args.workers <= 0:
             raise ConfigError("--workers must be positive")
         if args.repeat is not None and args.repeat <= 0:
@@ -279,6 +311,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.webhook_attempts <= 0:
             raise ConfigError("--webhook-attempts must be positive")
         if args.repeat is None:
+            LOGGER.debug("running one-shot check cycle")
             results = run_checks(checks, args.workers)
             transitions = []
             if args.history is not None:
@@ -292,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
         saw_failure = False
         try:
             while True:
+                LOGGER.debug("running repeated check cycle")
                 results = run_checks(checks, args.workers)
                 saw_failure = saw_failure or not all(item.ok for item in results)
                 transitions = []

@@ -25,6 +25,9 @@ moni --version
 Checks may declare a `group` and string `tags`. Select a group with
 `--group NAME` and require one or more tags with repeatable `--tag NAME`.
 JSON output includes the group and tags for downstream tooling.
+Use `--log-level info --log-format json` for structured diagnostic records on
+stderr; diagnostic records never include endpoint values or substituted
+environment values.
 
 Exit codes:
 

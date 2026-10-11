@@ -105,8 +105,8 @@ For every workload:
 ## Current status
 
 - v0.1: complete and pushed.
-- v0.2: in progress; history inspection, environment references, groups/tags,
-  filtering, and structured result metadata are complete. Diagnostics and
-  structured logging remain.
+- v0.2: complete; history inspection, environment references, groups/tags,
+  filtering, structured result metadata, diagnostics, and structured logging
+  are implemented. v0.3 is next.
 - v0.3–v1.0: not started.
 

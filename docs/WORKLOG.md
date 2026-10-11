@@ -150,3 +150,16 @@ Added grouped and tagged checks for local operator workflows:
 Validation: `python3 -m unittest discover -s tests -v` passed 27 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed.
+
+## Long-term workload 4 — 2026-10-11
+
+Completed the v0.2 diagnostics and structured-logging slice:
+
+- Added configurable warning/info/debug logging for check execution.
+- Added JSON log records with timestamps, levels, and safe messages on stderr.
+- Kept endpoint and environment-substituted values out of diagnostic records.
+- Added formatter coverage and advanced the roadmap status to v0.2 complete.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 28 tests with
+`ResourceWarning` promoted to errors; `make smoke`, `git diff --check`, and a
+filtered JSON/logging smoke invocation also passed.
