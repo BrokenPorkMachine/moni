@@ -75,3 +75,17 @@ Added persisted state transitions to the SQLite history contract:
 
 Validation: `python3 -m unittest discover -s tests -v` passed 14 tests with
 `ResourceWarning` promoted to errors.
+
+## Sixth workload — 2026-10-11
+
+Completed M3 persistence and alert delivery:
+
+- Added optional webhook POSTs for pass/fail state changes only.
+- Added bounded exponential retry with configurable attempt count.
+- Required SQLite history when webhooks are enabled, preserving state across
+  restarts.
+- Made notification failure visible through one-shot exit code `1`.
+- Confirmed check execution remains separate from notification delivery.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 18 tests with
+`ResourceWarning` promoted to errors. M4 release hardening is next.

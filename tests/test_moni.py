@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import moni
 import history
+import notifier
 
 
 class MoniTests(unittest.TestCase):
@@ -102,6 +103,42 @@ class MoniTests(unittest.TestCase):
         self.assertEqual(second[0].previous_ok, True)
         self.assertTrue(second[0].changed)
         self.assertEqual(second[0].changed_at, 20.0)
+
+    def test_webhook_ignores_initial_state(self):
+        transition = history.StateTransition("health", "http", None, True, 10.0)
+        with patch("notifier.urlopen") as send:
+            self.assertTrue(notifier.send_transitions("https://hook", [transition]))
+        send.assert_not_called()
+
+    def test_webhook_retries_changed_state(self):
+        class Response:
+            status = 204
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, count): return b""
+        transition = history.StateTransition("health", "http", True, False, 20.0)
+        with patch("notifier.urlopen", side_effect=[OSError("offline"), Response()]) as send, patch(
+            "notifier.time.sleep"
+        ) as pause:
+            self.assertTrue(notifier.send_transitions("https://hook", [transition], attempts=2))
+        self.assertEqual(send.call_count, 2)
+        pause.assert_called_once_with(0.25)
+
+    def test_webhook_requires_history(self):
+        path = self.config({"checks": []})
+        self.assertEqual(moni.main(["check", str(path), "--webhook", "https://hook"]), 2)
+
+    def test_webhook_failure_returns_failure_exit_code(self):
+        path = self.config({"checks": []})
+        transition = history.StateTransition("health", "http", True, False, 20.0)
+        result = moni.CheckResult("health", "http", True, 1.0)
+        with patch("moni.run_checks", return_value=[result]), patch(
+            "moni.history.record_results", return_value=[transition]
+        ), patch("moni.notifier.send_transitions", return_value=False):
+            self.assertEqual(
+                moni.main(["check", str(path), "--history", "/tmp/moni-history.sqlite", "--webhook", "https://hook"]),
+                1,
+            )
 
     def test_check_can_write_history(self):
         config = self.config({"checks": []})
