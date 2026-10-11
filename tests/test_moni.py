@@ -111,6 +111,15 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(moni.ConfigError):
             moni.parse_agent_secrets(["edge-1=MONI_EDGE_SECRET", "edge-1=MONI_EDGE_SECRET"])
 
+    def test_maintenance_windows_support_daytime_and_overnight_ranges(self):
+        self.assertTrue(moni.maintenance_window_active("09:00-17:00", moni.datetime(2026, 1, 1, 12, 0)))
+        self.assertFalse(moni.maintenance_window_active("09:00-17:00", moni.datetime(2026, 1, 1, 18, 0)))
+        self.assertTrue(moni.maintenance_window_active("22:00-02:00", moni.datetime(2026, 1, 1, 23, 0)))
+        self.assertTrue(moni.maintenance_window_active("22:00-02:00", moni.datetime(2026, 1, 2, 1, 0)))
+        self.assertFalse(moni.maintenance_window_active("22:00-02:00", moni.datetime(2026, 1, 1, 12, 0)))
+        with self.assertRaises(moni.ConfigError):
+            moni.maintenance_window_active("bad")
+
     def test_agent_report_signature_and_replay_protection(self):
         info = agent.local_agent("edge-1")
         report = agent.create_report(info, [{"name": "health", "ok": True}], report_id="r1", sent_at=100.0, nonce="n1")
@@ -402,6 +411,23 @@ class MoniTests(unittest.TestCase):
             self.assertEqual(
                 moni.main(
                     ["check", str(path), "--history", "/tmp/moni-history.sqlite", "--webhook", "https://hook", "--silence", "health"]
+                ),
+                0,
+            )
+        self.assertEqual(send.call_args.args[1], [])
+
+    def test_maintenance_window_suppresses_webhook(self):
+        path = self.config({"checks": []})
+        transition = history.StateTransition("health", "http", True, False, 20.0)
+        result = moni.CheckResult("health", "http", True, 1.0)
+        with patch("moni.run_checks", return_value=[result]), patch(
+            "moni.history.record_results", return_value=[transition]
+        ), patch("moni.notifier.send_transitions", return_value=True) as send, patch(
+            "moni.maintenance_window_active", return_value=True
+        ):
+            self.assertEqual(
+                moni.main(
+                    ["check", str(path), "--history", "/tmp/moni-history.sqlite", "--webhook", "https://hook", "--maintenance-window", "09:00-17:00"]
                 ),
                 0,
             )

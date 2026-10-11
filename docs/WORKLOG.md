@@ -308,3 +308,16 @@ Added explicit notification silences:
   into a failure or suppress its execution.
 
 Validation: `make smoke` passed with 46 tests and `git diff --check` passed.
+
+## Long-term workload 16 — 2026-10-11
+
+Added local-clock maintenance windows:
+
+- Added `check --maintenance-window START-END` with daytime and overnight
+  interval support.
+- Notifications are suppressed during maintenance while checks and SQLite
+  observations continue unchanged.
+- Added deterministic coverage for interval boundaries and notification
+  suppression.
+
+Validation: `make smoke` passed with 48 tests and `git diff --check` passed.

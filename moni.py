@@ -245,6 +245,22 @@ def parse_agent_secrets(values: list[str]) -> dict[str, str]:
     return secrets
 
 
+def maintenance_window_active(window: str | None, now: datetime | None = None) -> bool:
+    """Return whether a local HH:MM-HH:MM maintenance window is active."""
+    if window is None:
+        return False
+    start_text, separator, end_text = window.partition("-")
+    if not separator:
+        raise ConfigError("--maintenance-window must use HH:MM-HH:MM")
+    try:
+        start = datetime.strptime(start_text, "%H:%M").time()
+        end = datetime.strptime(end_text, "%H:%M").time()
+    except ValueError as exc:
+        raise ConfigError("--maintenance-window must use HH:MM-HH:MM") from exc
+    current = (datetime.now() if now is None else now).time()
+    return start <= current < end if start <= end else current >= start or current < end
+
+
 def render(results: list[CheckResult], json_output: bool) -> str:
     if json_output:
         return json.dumps([asdict(item) for item in results], indent=2) + "\n"
@@ -313,6 +329,12 @@ def build_parser() -> argparse.ArgumentParser:
                 action="append",
                 default=[],
                 help="suppress webhook notifications for this check name",
+            )
+            sub.add_argument(
+                "--maintenance-window",
+                default=None,
+                metavar="START-END",
+                help="suppress webhook notifications during local HH:MM-HH:MM",
             )
             sub.add_argument("--log-level", choices=("debug", "info", "warning"), default="warning")
             sub.add_argument("--log-format", choices=("text", "json"), default="text")
@@ -424,7 +446,11 @@ def main(argv: list[str] | None = None) -> int:
             transitions = []
             if args.history is not None:
                 transitions = history.record_results(args.history, results)
-            transitions = [transition for transition in transitions if transition.name not in args.silence]
+            transitions = [
+                transition
+                for transition in transitions
+                if transition.name not in args.silence and not maintenance_window_active(args.maintenance_window)
+            ]
             notification_failed = args.webhook is not None and not notifier.send_transitions(
                 args.webhook, transitions, attempts=args.webhook_attempts
             )
@@ -440,7 +466,12 @@ def main(argv: list[str] | None = None) -> int:
                 transitions = []
                 if args.history is not None:
                     transitions = history.record_results(args.history, results)
-                transitions = [transition for transition in transitions if transition.name not in args.silence]
+                transitions = [
+                    transition
+                    for transition in transitions
+                    if transition.name not in args.silence
+                    and not maintenance_window_active(args.maintenance_window)
+                ]
                 if args.webhook is not None and not notifier.send_transitions(
                     args.webhook, transitions, attempts=args.webhook_attempts
                 ):

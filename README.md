@@ -22,6 +22,8 @@ python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni --silence noisy-check
+python3 moni.py check examples/moni.json --history .moni/history.sqlite \
+  --webhook https://monitoring.example/hooks/moni --maintenance-window 22:00-02:00
 moni --version
 ```
 
@@ -73,6 +75,9 @@ only state changes. Delivery retries up to three times with exponential
 backoff; a failed delivery makes a one-shot check return `1`.
 Use repeatable `--silence NAME` options to suppress webhook notifications for
 named checks while continuing to run and persist them.
+Use `--maintenance-window START-END` for a local clock interval such as
+`22:00-02:00`; all webhook notifications are suppressed during the interval,
+while checks and history continue.
 
 Use `moni history PATH` to inspect recent persisted observations without
 opening SQLite directly; add `--json` for machine-readable output. Use
