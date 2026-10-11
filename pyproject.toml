@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "moni"
-version = "0.1.0"
+version = "1.0.0"
 description = "Dependency-free HTTP and TCP service monitor"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,4 +15,4 @@ authors = [{name = "Moni contributors"}]
 moni = "moni:main"
 
 [tool.setuptools]
-py-modules = ["moni", "history", "notifier"]
+py-modules = ["moni", "history", "notifier", "agent", "api", "components"]

@@ -106,7 +106,7 @@ class MoniTests(unittest.TestCase):
         info = agent.local_agent("edge-1")
         self.assertEqual(info.as_dict(), {
             "name": "edge-1",
-            "version": "0.1.0",
+            "version": "1.0.0",
             "capabilities": ["http", "tcp", "history", "webhook"],
         })
         with self.assertRaises(ValueError):
@@ -237,7 +237,7 @@ class MoniTests(unittest.TestCase):
         self.assertEqual(moni.main(["validate", str(path)]), 0)
 
     def test_version_is_defined(self):
-        self.assertEqual(moni.VERSION, "0.1.0")
+        self.assertEqual(moni.VERSION, "1.0.0")
 
     def test_http_result_passes_expected_status(self):
         class Response:

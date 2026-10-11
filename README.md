@@ -7,6 +7,12 @@ Install the package locally with `python3 -m pip install .`, or run
 `python3 moni.py` directly from a checkout. The package requires Python 3.11+
 and has no runtime dependencies.
 
+Moni 1.0.0 preserves the documented configuration, CLI exit codes, and
+read-only API paths. Run `make release-check` before publishing an artifact.
+Release and recovery policies are documented in
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md),
+[docs/SECURITY.md](docs/SECURITY.md), and [docs/RECOVERY.md](docs/RECOVERY.md).
+
 ## Quick start
 
 ```sh

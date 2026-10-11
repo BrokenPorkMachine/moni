@@ -29,7 +29,7 @@ from urllib.request import Request, urlopen
 EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_USAGE = 2
-VERSION = "0.1.0"
+VERSION = "1.0.0"
 ENV_REFERENCE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}")
 LOGGER = logging.getLogger("moni")
 

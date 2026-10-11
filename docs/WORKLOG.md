@@ -345,3 +345,15 @@ Completed the v0.5 reliability and integrations scope:
 - Advanced the roadmap to v0.5 complete.
 
 Validation: `make smoke` passed with 50 tests and `git diff --check` passed.
+
+## Long-term workload 19 — 2026-10-11
+
+Started v1.0 release hardening:
+
+- Fixed wheel packaging to include agent, API, and component modules.
+- Bumped the release version to 1.0.0 and added `make release-check` artifact
+  verification.
+- Added compatibility/upgrade, security/data-handling, and recovery policies.
+
+Validation: `make release-check` passed: 50 tests, sample validation, release
+wheel module verification, and `git diff --check` all passed.

@@ -120,5 +120,8 @@ For every workload:
   notification silences, local-clock maintenance windows, durable pending
   notification delivery history, and conservative configuration migration are
   implemented.
-- v0.6–v1.0: not started.
+- v1.0: in progress; versioned packaging, compatibility, security/data
+  handling, recovery documentation, and release artifact verification are
+  implemented. Signed publication and reproducible-build attestation remain
+  release-operator steps.
 
