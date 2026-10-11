@@ -41,6 +41,32 @@ class MoniTests(unittest.TestCase):
         self.assertFalse(output.ok)
         self.assertIn("offline", output.error)
 
+    def test_http_timeout_is_a_failed_check(self):
+        with patch("moni.urlopen", side_effect=TimeoutError("timed out")):
+            output = moni.run_http({"name": "health", "type": "http", "url": "https://test"})
+        self.assertFalse(output.ok)
+        self.assertIn("timed out", output.error)
+
+    def test_malformed_config_file_is_a_usage_error(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "broken.json"
+        path.write_text("{not json", encoding="utf-8")
+        self.assertEqual(moni.main(["validate", str(path)]), 2)
+
+    def test_failed_check_returns_failure_exit_code(self):
+        path = self.config({"checks": [{"name": "down", "type": "tcp", "host": "127.0.0.1", "port": 9}]})
+        failed = moni.CheckResult("down", "tcp", False, 1.0, error="refused")
+        with patch("moni.run_checks", return_value=[failed]):
+            self.assertEqual(moni.main(["check", str(path)]), 1)
+
+    def test_repeat_mode_stops_cleanly_on_keyboard_interrupt(self):
+        path = self.config({"checks": []})
+        with patch("moni.run_checks", return_value=[]), patch(
+            "moni.time.sleep", side_effect=KeyboardInterrupt
+        ):
+            self.assertEqual(moni.main(["check", str(path), "--repeat", "1"]), 0)
+
     def test_tcp_check_passes_when_connection_succeeds(self):
         connection = MagicMock()
         connection.__enter__.return_value = connection

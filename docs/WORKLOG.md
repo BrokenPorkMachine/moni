@@ -37,3 +37,16 @@ Implemented the repeat-mode operator workflow and hardened CLI validation:
 - README documents continuous operation.
 
 Validation: `python3 -m unittest discover -s tests -v` passed 7 tests.
+
+## Third workload — 2026-10-11
+
+Closed the M1/M2 deterministic acceptance gaps:
+
+- Added timeout handling coverage.
+- Added malformed-configuration coverage.
+- Added failed-check exit-code coverage.
+- Added graceful Ctrl-C coverage for repeat mode.
+- Updated the plan status: M0, M1, and M2 are complete; M3 is next.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 11 tests and
+the sample configuration validates successfully.

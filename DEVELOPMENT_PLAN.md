@@ -82,7 +82,10 @@ Exit gate: reproducible test and release commands pass from a clean checkout.
 
 ## Current status
 
-- M0: in progress.
-- M1: not started.
-- M2–M4: not started.
+- M0: complete.
+- M1: complete; deterministic pass, fail, timeout, malformed-config, and
+  mixed-check coverage is present.
+- M2: complete; human-readable output, validation, one-shot checks, repeat
+  mode, and graceful interruption are implemented.
+- M3–M4: not started.
 
