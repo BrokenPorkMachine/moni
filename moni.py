@@ -229,6 +229,19 @@ def select_checks(
     ]
 
 
+def merge_transitions(*groups: list[history.StateTransition]) -> list[history.StateTransition]:
+    """Merge transition lists while preserving the first occurrence of an event."""
+    merged: list[history.StateTransition] = []
+    seen: set[tuple[str, str, float, bool]] = set()
+    for group in groups:
+        for transition in group:
+            key = (transition.name, transition.type, transition.changed_at, transition.current_ok)
+            if transition.changed and key not in seen:
+                seen.add(key)
+                merged.append(transition)
+    return merged
+
+
 def parse_agent_secrets(values: list[str]) -> dict[str, str]:
     """Resolve serve's NAME=ENV_VAR entries without putting secrets in argv."""
     secrets: dict[str, str] = {}
@@ -446,6 +459,8 @@ def main(argv: list[str] | None = None) -> int:
             transitions = []
             if args.history is not None:
                 transitions = history.record_results(args.history, results)
+                if args.webhook is not None:
+                    transitions = merge_transitions(history.pending_notifications(args.history), transitions)
             transitions = [
                 transition
                 for transition in transitions
@@ -454,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
             notification_failed = args.webhook is not None and not notifier.send_transitions(
                 args.webhook, transitions, attempts=args.webhook_attempts
             )
+            if args.webhook is not None and args.history is not None:
+                history.record_notification_delivery(args.history, transitions, not notification_failed)
             sys.stdout.write(render(results, args.json))
             return EXIT_OK if all(item.ok for item in results) and not notification_failed else EXIT_FAILED
 
@@ -461,11 +478,14 @@ def main(argv: list[str] | None = None) -> int:
         try:
             while True:
                 LOGGER.debug("running repeated check cycle")
+                delivery_failed = False
                 results = run_checks(checks, args.workers)
                 saw_failure = saw_failure or not all(item.ok for item in results)
                 transitions = []
                 if args.history is not None:
                     transitions = history.record_results(args.history, results)
+                    if args.webhook is not None:
+                        transitions = merge_transitions(history.pending_notifications(args.history), transitions)
                 transitions = [
                     transition
                     for transition in transitions
@@ -475,8 +495,11 @@ def main(argv: list[str] | None = None) -> int:
                 if args.webhook is not None and not notifier.send_transitions(
                     args.webhook, transitions, attempts=args.webhook_attempts
                 ):
+                    delivery_failed = True
                     saw_failure = True
                     print("moni: webhook delivery failed", file=sys.stderr)
+                if args.webhook is not None and args.history is not None:
+                    history.record_notification_delivery(args.history, transitions, not delivery_failed)
                 sys.stdout.write(render(results, args.json))
                 sys.stdout.flush()
                 time.sleep(args.repeat)

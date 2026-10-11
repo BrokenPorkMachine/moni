@@ -34,6 +34,17 @@ CREATE TABLE IF NOT EXISTS check_state (
     changed_at REAL NOT NULL,
     last_checked_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS notification_deliveries (
+    event_key TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    previous_ok INTEGER,
+    current_ok INTEGER NOT NULL CHECK (current_ok IN (0, 1)),
+    changed_at REAL NOT NULL,
+    delivered INTEGER NOT NULL CHECK (delivered IN (0, 1)),
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at REAL
+);
 """
 
 
@@ -178,6 +189,61 @@ def summarize_observations(path: Path) -> list[dict[str, Any]]:
         }
         for row in rows
     ]
+
+
+def _event_key(transition: "StateTransition") -> str:
+    return f"{transition.name}|{transition.type}|{transition.changed_at}|{int(transition.current_ok)}"
+
+
+def pending_notifications(path: Path) -> list["StateTransition"]:
+    """Load changed notifications that were not delivered successfully."""
+    from history import StateTransition
+
+    try:
+        database = sqlite3.connect(path)
+        try:
+            database.executescript(SCHEMA)
+            rows = database.execute(
+                """SELECT name, type, previous_ok, current_ok, changed_at
+                   FROM notification_deliveries WHERE delivered = 0 ORDER BY changed_at, event_key"""
+            ).fetchall()
+        finally:
+            database.close()
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot read notification history {path}: {exc}") from exc
+    return [StateTransition(row[0], row[1], None if row[2] is None else bool(row[2]), bool(row[3]), row[4]) for row in rows]
+
+
+def record_notification_delivery(
+    path: Path, transitions: list["StateTransition"], delivered: bool, attempted_at: float | None = None
+) -> None:
+    """Record delivery outcome so failed events survive process restarts."""
+    changed = [transition for transition in transitions if transition.changed]
+    if not changed:
+        return
+    timestamp = time.time() if attempted_at is None else attempted_at
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        database = sqlite3.connect(path)
+        try:
+            database.executescript(SCHEMA)
+            database.executemany(
+                """INSERT INTO notification_deliveries
+                   (event_key, name, type, previous_ok, current_ok, changed_at, delivered, attempts, last_attempt_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                   ON CONFLICT(event_key) DO UPDATE SET
+                     delivered = excluded.delivered, attempts = notification_deliveries.attempts + 1,
+                     last_attempt_at = excluded.last_attempt_at""",
+                [
+                    (_event_key(item), item.name, item.type, item.previous_ok, int(item.current_ok), item.changed_at, int(delivered), timestamp)
+                    for item in changed
+                ],
+            )
+            database.commit()
+        finally:
+            database.close()
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot write notification history {path}: {exc}") from exc
 
 
 def prune_observations(path: Path, max_rows: int) -> int:

@@ -321,3 +321,15 @@ Added local-clock maintenance windows:
   suppression.
 
 Validation: `make smoke` passed with 48 tests and `git diff --check` passed.
+
+## Long-term workload 17 — 2026-10-11
+
+Added durable notification delivery history:
+
+- Added SQLite delivery records for state-change events and their attempt
+  outcomes.
+- Failed webhook events remain pending across process restarts and are merged
+  with new transitions on the next cycle; successful events are deduplicated.
+- Kept delivery persistence opt-in with the existing `--history` requirement.
+
+Validation: `make smoke` passed with 49 tests and `git diff --check` passed.

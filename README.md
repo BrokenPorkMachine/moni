@@ -79,6 +79,10 @@ Use `--maintenance-window START-END` for a local clock interval such as
 `22:00-02:00`; all webhook notifications are suppressed during the interval,
 while checks and history continue.
 
+Webhook delivery outcomes are stored in the same history database. Failed
+events remain pending and are retried by a later check process; successful
+events are not delivered again.
+
 Use `moni history PATH` to inspect recent persisted observations without
 opening SQLite directly; add `--json` for machine-readable output. Use
 `--summary` to aggregate all observations by check with pass rate and average

@@ -357,6 +357,16 @@ class MoniTests(unittest.TestCase):
         self.assertTrue(second[0].changed)
         self.assertEqual(second[0].changed_at, 20.0)
 
+    def test_failed_notification_is_pending_until_delivered(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        transition = history.StateTransition("health", "http", True, False, 20.0)
+        history.record_notification_delivery(path, [transition], False, attempted_at=21.0)
+        self.assertEqual(history.pending_notifications(path), [transition])
+        history.record_notification_delivery(path, [transition], True, attempted_at=22.0)
+        self.assertEqual(history.pending_notifications(path), [])
+
     def test_webhook_ignores_initial_state(self):
         transition = history.StateTransition("health", "http", None, True, 10.0)
         with patch("notifier.urlopen") as send:
