@@ -3,6 +3,10 @@
 Moni is a dependency-free service monitor for HTTP(S) endpoints and TCP
 services.
 
+Install the package locally with `python3 -m pip install .`, or run
+`python3 moni.py` directly from a checkout. The package requires Python 3.11+
+and has no runtime dependencies.
+
 ## Quick start
 
 ```sh
@@ -13,6 +17,7 @@ python3 moni.py check examples/moni.json --repeat 30
 python3 moni.py check examples/moni.json --history .moni/history.sqlite
 python3 moni.py check examples/moni.json --history .moni/history.sqlite \
   --webhook https://monitoring.example/hooks/moni
+moni --version
 ```
 
 Exit codes:

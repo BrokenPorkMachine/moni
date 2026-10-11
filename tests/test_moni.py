@@ -27,6 +27,9 @@ class MoniTests(unittest.TestCase):
         path = self.config({"checks": [{"name": "x", "type": "tcp", "host": "localhost", "port": 80}]})
         self.assertEqual(moni.main(["validate", str(path)]), 0)
 
+    def test_version_is_defined(self):
+        self.assertEqual(moni.VERSION, "0.1.0")
+
     def test_http_result_passes_expected_status(self):
         class Response:
             status = 204
@@ -127,6 +130,14 @@ class MoniTests(unittest.TestCase):
     def test_webhook_requires_history(self):
         path = self.config({"checks": []})
         self.assertEqual(moni.main(["check", str(path), "--webhook", "https://hook"]), 2)
+
+    def test_webhook_rejects_non_http_urls(self):
+        path = self.config({"checks": []})
+        self.assertFalse(notifier.valid_webhook_url("file:///tmp/hook"))
+        self.assertEqual(
+            moni.main(["check", str(path), "--history", "/tmp/moni-history.sqlite", "--webhook", "file:///tmp/hook"]),
+            2,
+        )
 
     def test_webhook_failure_returns_failure_exit_code(self):
         path = self.config({"checks": []})

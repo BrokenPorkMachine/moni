@@ -5,10 +5,16 @@ from __future__ import annotations
 import json
 import time
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 if TYPE_CHECKING:
     from history import StateTransition
+
+
+def valid_webhook_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
 def send_transitions(

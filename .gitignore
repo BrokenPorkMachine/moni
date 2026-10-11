@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.moni/
+*.sqlite
+*.sqlite-*
+dist/
+build/
+*.egg-info/

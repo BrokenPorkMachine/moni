@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 EXIT_OK = 0
 EXIT_FAILED = 1
 EXIT_USAGE = 2
+VERSION = "0.1.0"
 
 
 class ConfigError(ValueError):
@@ -155,6 +156,7 @@ def render(results: list[CheckResult], json_output: bool) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="moni", description="Check HTTP and TCP services.")
+    parser.add_argument("--version", action="version", version=f"moni {VERSION}")
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in ("validate", "check"):
         sub = subparsers.add_parser(command)
@@ -188,6 +190,8 @@ def main(argv: list[str] | None = None) -> int:
             raise ConfigError("--repeat must be positive")
         if args.webhook is not None and args.history is None:
             raise ConfigError("--webhook requires --history so state survives restarts")
+        if args.webhook is not None and not notifier.valid_webhook_url(args.webhook):
+            raise ConfigError("--webhook must be an HTTP(S) URL with a host")
         if args.webhook_attempts <= 0:
             raise ConfigError("--webhook-attempts must be positive")
         if args.repeat is None:

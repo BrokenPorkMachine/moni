@@ -89,3 +89,23 @@ Completed M3 persistence and alert delivery:
 
 Validation: `python3 -m unittest discover -s tests -v` passed 18 tests with
 `ResourceWarning` promoted to errors. M4 release hardening is next.
+
+## Seventh workload — 2026-10-11
+
+Completed M4 release hardening:
+
+- Added `pyproject.toml` metadata and a `moni` console entry point.
+- Added Makefile smoke targets and Python 3.11–3.13 CI workflow.
+- Added `.gitignore`, version output, and wheel-build support.
+- Restricted webhook destinations to HTTP(S) URLs with a host.
+
+Validation:
+
+```text
+make smoke                                      passed
+python3 moni.py --version                       moni 0.1.0
+python3 -m pip wheel . --no-deps --no-build-isolation  passed
+python3 -m unittest discover -s tests -v       20 passed
+```
+
+Moni v0.1 is complete against the development-plan scope.
