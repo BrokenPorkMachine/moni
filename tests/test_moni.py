@@ -102,6 +102,43 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             agent.local_agent(" ")
 
+    def test_agent_report_signature_and_replay_protection(self):
+        info = agent.local_agent("edge-1")
+        report = agent.create_report(info, [{"name": "health", "ok": True}], report_id="r1", sent_at=100.0, nonce="n1")
+        signature = agent.sign_report(report, "secret")
+        coordinator = agent.Coordinator({"edge-1": "secret"})
+        coordinator.accept(report, signature, now=100.0)
+        self.assertEqual(coordinator.snapshot()[0]["report_id"], "r1")
+        with self.assertRaises(agent.ReportError):
+            coordinator.accept(report, signature, now=100.0)
+
+    def test_agent_report_rejects_forgery_and_stale_timestamp(self):
+        info = agent.local_agent("edge-1")
+        report = agent.create_report(info, [], report_id="r1", sent_at=100.0, nonce="n1")
+        coordinator = agent.Coordinator({"edge-1": "secret"})
+        with self.assertRaises(agent.ReportError):
+            coordinator.accept(report, agent.sign_report(report, "wrong"), now=100.0)
+        with self.assertRaises(agent.ReportError):
+            coordinator.accept(report, agent.sign_report(report, "secret"), now=401.0)
+
+    def test_report_endpoint_accepts_signed_agent_report(self):
+        info = agent.local_agent("edge-1")
+        report = agent.create_report(info, [], report_id="r1", sent_at=100.0, nonce="n1")
+        coordinator = agent.Coordinator({"edge-1": "secret"})
+        handler_type = api.make_handler(api.StateStore(), coordinator=coordinator)
+        handler = handler_type.__new__(handler_type)
+        handler.path = "/reports"
+        handler.headers = {"X-Moni-Signature": agent.sign_report(report, "secret"), "Content-Length": str(len(json.dumps(report)))}
+        handler.rfile = MagicMock()
+        handler.rfile.read.return_value = json.dumps(report).encode()
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        handler.wfile = MagicMock()
+        with patch("agent.time.time", return_value=100.0):
+            handler.do_POST()
+        self.assertEqual(handler.send_response.call_args.args[0], 202)
+
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(
             {"checks": [{"name": "${MONI_NAME}", "type": "http", "url": "${MONI_URL}"}]}

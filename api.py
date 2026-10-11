@@ -9,6 +9,8 @@ from threading import Lock
 from typing import Any
 from urllib.parse import urlparse
 
+import agent
+
 
 class StateStore:
     def __init__(self) -> None:
@@ -24,7 +26,11 @@ class StateStore:
             return [dict(result) for result in self._results]
 
 
-def make_handler(store: StateStore, auth_token: str | None = None) -> type[BaseHTTPRequestHandler]:
+def make_handler(
+    store: StateStore,
+    auth_token: str | None = None,
+    coordinator: agent.Coordinator | None = None,
+) -> type[BaseHTTPRequestHandler]:
     class MoniHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             if auth_token is not None:
@@ -42,6 +48,20 @@ def make_handler(store: StateStore, auth_token: str | None = None) -> type[BaseH
             else:
                 self._send(404, {"error": "not found"})
 
+        def do_POST(self) -> None:  # noqa: N802
+            if coordinator is None or urlparse(self.path).path != "/reports":
+                self._send(404, {"error": "not found"})
+                return
+            signature = self.headers.get("X-Moni-Signature", "")
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                report = json.loads(self.rfile.read(length))
+                coordinator.accept(report, signature)
+            except (ValueError, TypeError, json.JSONDecodeError, agent.ReportError) as exc:
+                self._send(401, {"error": str(exc)})
+                return
+            self._send(202, {"accepted": True})
+
         def _send(self, status: int, payload: dict[str, Any]) -> None:
             body = (json.dumps(payload, sort_keys=True) + "\n").encode("utf-8")
             self.send_response(status)
@@ -57,8 +77,12 @@ def make_handler(store: StateStore, auth_token: str | None = None) -> type[BaseH
 
 
 def create_server(
-    host: str, port: int, store: StateStore, auth_token: str | None = None
+    host: str,
+    port: int,
+    store: StateStore,
+    auth_token: str | None = None,
+    coordinator: agent.Coordinator | None = None,
 ) -> ThreadingHTTPServer:
     if host not in {"127.0.0.1", "localhost", "::1"} and not auth_token:
         raise ValueError("--auth-token is required for non-loopback service binds")
-    return ThreadingHTTPServer((host, port), make_handler(store, auth_token))
+    return ThreadingHTTPServer((host, port), make_handler(store, auth_token, coordinator))

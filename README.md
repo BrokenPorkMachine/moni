@@ -42,6 +42,14 @@ Non-loopback binds require `--auth-token TOKEN`; clients must send
 `Authorization: Bearer TOKEN`. Keep the token out of shell history and process
 list exposure where possible.
 
+The Python API also provides an authenticated coordinator contract for future
+multi-agent service mode. Agents create canonical JSON reports and sign them
+with an HMAC-SHA256 shared secret; the coordinator rejects unknown agents,
+forged signatures, stale reports, and duplicate report IDs. Reports are
+accepted at `POST /reports` when a server is created with an `agent.Coordinator`.
+The existing CLI remains single-agent mode until coordinator configuration is
+added.
+
 Exit codes:
 
 - `0`: every check passed.

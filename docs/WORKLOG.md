@@ -231,3 +231,18 @@ Completed the v0.3 service security slice:
 Validation: `python3 -m unittest discover -s tests -v` passed 34 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed.
+
+## Long-term workload 10 — 2026-10-11
+
+Implemented the first authenticated v0.4 transport slice:
+
+- Added canonical HMAC-SHA256 agent report envelopes with agent identity,
+  capabilities, report IDs, nonces, and timestamps.
+- Added coordinator verification for unknown agents, forged signatures, stale
+  reports, and duplicate report IDs.
+- Added an opt-in `POST /reports` API endpoint that accepts only verified
+  reports; existing CLI and loopback read endpoints are unchanged.
+- Documented that CLI coordinator wiring and scheduler/executor interfaces are
+  still pending.
+
+Validation: `make smoke` passed with 38 tests and `git diff --check` passed.
