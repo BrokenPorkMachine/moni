@@ -308,6 +308,12 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--webhook-attempts", type=int, default=3, metavar="N")
             sub.add_argument("--group", default=None, help="run only checks in this group")
             sub.add_argument("--tag", action="append", default=[], help="run checks containing this tag")
+            sub.add_argument(
+                "--silence",
+                action="append",
+                default=[],
+                help="suppress webhook notifications for this check name",
+            )
             sub.add_argument("--log-level", choices=("debug", "info", "warning"), default="warning")
             sub.add_argument("--log-format", choices=("text", "json"), default="text")
     history_parser = subparsers.add_parser("history", help="inspect stored observations")
@@ -418,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
             transitions = []
             if args.history is not None:
                 transitions = history.record_results(args.history, results)
+            transitions = [transition for transition in transitions if transition.name not in args.silence]
             notification_failed = args.webhook is not None and not notifier.send_transitions(
                 args.webhook, transitions, attempts=args.webhook_attempts
             )
@@ -433,6 +440,7 @@ def main(argv: list[str] | None = None) -> int:
                 transitions = []
                 if args.history is not None:
                     transitions = history.record_results(args.history, results)
+                transitions = [transition for transition in transitions if transition.name not in args.silence]
                 if args.webhook is not None and not notifier.send_transitions(
                     args.webhook, transitions, attempts=args.webhook_attempts
                 ):

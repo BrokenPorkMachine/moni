@@ -296,3 +296,15 @@ Started v0.5 reliability reporting:
   contract with offline tests.
 
 Validation: `make smoke` passed with 45 tests and `git diff --check` passed.
+
+## Long-term workload 15 — 2026-10-11
+
+Added explicit notification silences:
+
+- Added repeatable `check --silence NAME` options.
+- Silenced checks continue to execute and persist observations, but their
+  state transitions are removed from webhook delivery.
+- Added regression coverage proving silencing does not turn a healthy check
+  into a failure or suppress its execution.
+
+Validation: `make smoke` passed with 46 tests and `git diff --check` passed.

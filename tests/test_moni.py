@@ -392,6 +392,21 @@ class MoniTests(unittest.TestCase):
                 1,
             )
 
+    def test_silence_suppresses_webhook_for_named_check(self):
+        path = self.config({"checks": []})
+        transition = history.StateTransition("health", "http", True, False, 20.0)
+        result = moni.CheckResult("health", "http", True, 1.0)
+        with patch("moni.run_checks", return_value=[result]), patch(
+            "moni.history.record_results", return_value=[transition]
+        ), patch("moni.notifier.send_transitions", return_value=True) as send:
+            self.assertEqual(
+                moni.main(
+                    ["check", str(path), "--history", "/tmp/moni-history.sqlite", "--webhook", "https://hook", "--silence", "health"]
+                ),
+                0,
+            )
+        self.assertEqual(send.call_args.args[1], [])
+
     def test_check_can_write_history(self):
         config = self.config({"checks": []})
         directory = TemporaryDirectory()
