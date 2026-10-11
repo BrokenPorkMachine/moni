@@ -78,6 +78,19 @@ class MoniTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             api.create_server("0.0.0.0", 0, api.StateStore())
 
+    def test_api_requires_and_checks_bearer_token(self):
+        store = api.StateStore()
+        handler_type = api.make_handler(store, "secret")
+        handler = handler_type.__new__(handler_type)
+        handler.path = "/health"
+        handler.headers = {"Authorization": "Bearer wrong"}
+        handler.send_response = MagicMock()
+        handler.send_header = MagicMock()
+        handler.end_headers = MagicMock()
+        handler.wfile = MagicMock()
+        handler.do_GET()
+        self.assertEqual(handler.send_response.call_args.args[0], 401)
+
     def test_environment_references_expand_without_logging_values(self):
         path = self.config(
             {"checks": [{"name": "${MONI_NAME}", "type": "http", "url": "${MONI_URL}"}]}

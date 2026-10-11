@@ -108,8 +108,10 @@ For every workload:
 - v0.2: complete; history inspection, environment references, groups/tags,
   filtering, structured result metadata, diagnostics, and structured logging
   are implemented. v0.3 is next.
-- v0.3: in progress; loopback health/current-check endpoints, bounded SQLite
-  retention, and SIGHUP configuration reload are implemented. Authenticated
-  non-loopback access remains.
-- v0.4–v1.0: not started.
+- v0.3: complete; loopback health/current-check endpoints, bounded SQLite
+  retention, SIGHUP configuration reload, and authenticated non-loopback
+  access are implemented. The v0.3 exit gate is met for the documented local
+  service scope.
+- v0.4: next; agent model not started.
+- v0.5–v1.0: not started.
 

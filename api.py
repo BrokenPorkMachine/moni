@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
 from typing import Any
@@ -23,9 +24,14 @@ class StateStore:
             return [dict(result) for result in self._results]
 
 
-def make_handler(store: StateStore) -> type[BaseHTTPRequestHandler]:
+def make_handler(store: StateStore, auth_token: str | None = None) -> type[BaseHTTPRequestHandler]:
     class MoniHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
+            if auth_token is not None:
+                provided = self.headers.get("Authorization", "")
+                if not hmac.compare_digest(provided, f"Bearer {auth_token}"):
+                    self._send(401, {"error": "authentication required"})
+                    return
             path = urlparse(self.path).path
             results = store.snapshot()
             if path == "/health":
@@ -50,7 +56,9 @@ def make_handler(store: StateStore) -> type[BaseHTTPRequestHandler]:
     return MoniHandler
 
 
-def create_server(host: str, port: int, store: StateStore) -> ThreadingHTTPServer:
-    if host not in {"127.0.0.1", "localhost", "::1"}:
-        raise ValueError("serve host must be loopback until API authentication is implemented")
-    return ThreadingHTTPServer((host, port), make_handler(store))
+def create_server(
+    host: str, port: int, store: StateStore, auth_token: str | None = None
+) -> ThreadingHTTPServer:
+    if host not in {"127.0.0.1", "localhost", "::1"} and not auth_token:
+        raise ValueError("--auth-token is required for non-loopback service binds")
+    return ThreadingHTTPServer((host, port), make_handler(store, auth_token))

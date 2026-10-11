@@ -301,6 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--workers", type=int, default=None)
     serve_parser.add_argument("--history", type=Path, default=None, metavar="PATH")
     serve_parser.add_argument("--retention", type=int, default=None, metavar="ROWS")
+    serve_parser.add_argument("--auth-token", default=None, help="Bearer token for non-loopback API access")
     return parser
 
 
@@ -327,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.workers is not None and args.workers <= 0:
                 raise ConfigError("--workers must be positive")
             store = api.StateStore()
-            server = api.create_server(args.host, args.port, store)
+            server = api.create_server(args.host, args.port, store, args.auth_token)
             stop = threading.Event()
             checks_lock = threading.Lock()
             active_checks = checks

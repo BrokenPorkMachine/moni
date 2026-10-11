@@ -38,6 +38,9 @@ of rows.
 Send `SIGHUP` to a running `moni serve` process to reload its JSON
 configuration. A malformed replacement is rejected and the previous active
 configuration continues running.
+Non-loopback binds require `--auth-token TOKEN`; clients must send
+`Authorization: Bearer TOKEN`. Keep the token out of shell history and process
+list exposure where possible.
 
 Exit codes:
 

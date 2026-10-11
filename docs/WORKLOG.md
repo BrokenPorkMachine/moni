@@ -206,3 +206,16 @@ Added graceful configuration reload for service mode:
 Validation: `python3 -m unittest discover -s tests -v` passed 33 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed.
+
+## Long-term workload 8 — 2026-10-11
+
+Completed the v0.3 service security slice:
+
+- Added bearer-token authentication for non-loopback API binds.
+- Preserved unauthenticated loopback operation for local-only deployments.
+- Added unauthorized-request coverage and documented the security model.
+- Advanced the roadmap: v0.3 is complete and v0.4 agent architecture is next.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 34 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed.
