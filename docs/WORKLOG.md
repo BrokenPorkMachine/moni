@@ -357,3 +357,19 @@ Started v1.0 release hardening:
 
 Validation: `make release-check` passed: 50 tests, sample validation, release
 wheel module verification, and `git diff --check` all passed.
+
+## Long-term workload 20 — 2026-10-11
+
+Completed the v1.0 release workflow:
+
+- Added `make release-attest` to build twice with a fixed source epoch and
+  fail if wheel hashes differ.
+- Added SHA256 manifest generation and optional armored GPG signing via
+  `GPG_KEY=KEY_ID`.
+- Documented publication of the wheel, checksum manifest, and signature using
+  an operator-controlled key.
+- Marked the v1.0 roadmap complete; publishing remains an operator action.
+
+Validation: `make release-attest` passed with 50 tests, sample validation,
+identical repeated wheel hashes, manifest generation, and diff checks. GPG
+signing remains available when `GPG_KEY` is supplied.

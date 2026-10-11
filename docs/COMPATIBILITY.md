@@ -23,3 +23,8 @@ Upgrade procedure:
 3. Run the migration command when the release notes require it.
 4. Install the new wheel and run `moni validate CONFIG`.
 5. Resume the service or scheduled checks and inspect `moni history` output.
+
+For a release, run `make release-attest GPG_KEY=KEY_ID`. It builds twice with
+`SOURCE_DATE_EPOCH=0`, compares the wheel hashes, writes `SHA256SUMS`, and
+creates an armored detached GPG signature when a key ID is supplied. Publish
+the wheel, manifest, and signature together.

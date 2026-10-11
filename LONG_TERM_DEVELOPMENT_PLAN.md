@@ -120,8 +120,8 @@ For every workload:
   notification silences, local-clock maintenance windows, durable pending
   notification delivery history, and conservative configuration migration are
   implemented.
-- v1.0: in progress; versioned packaging, compatibility, security/data
-  handling, recovery documentation, and release artifact verification are
-  implemented. Signed publication and reproducible-build attestation remain
-  release-operator steps.
+- v1.0: complete; versioned packaging, compatibility, security/data handling,
+  recovery documentation, reproducible-build attestation, and an optional
+  GPG-signed release-manifest workflow are implemented. Publication still
+  requires an operator-controlled signing key and release channel.
 

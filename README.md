@@ -8,7 +8,9 @@ Install the package locally with `python3 -m pip install .`, or run
 and has no runtime dependencies.
 
 Moni 1.0.0 preserves the documented configuration, CLI exit codes, and
-read-only API paths. Run `make release-check` before publishing an artifact.
+read-only API paths. Run `make release-check` before publishing an artifact;
+run `make release-attest GPG_KEY=KEY_ID` to build a reproducibility-checked
+wheel, write `SHA256SUMS`, and optionally sign the manifest.
 Release and recovery policies are documented in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md),
 [docs/SECURITY.md](docs/SECURITY.md), and [docs/RECOVERY.md](docs/RECOVERY.md).
