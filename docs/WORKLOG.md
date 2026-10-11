@@ -63,3 +63,15 @@ Started M3 with optional SQLite observation history:
 
 Validation: `python3 -m unittest discover -s tests -v` passed 13 tests with
 `ResourceWarning` promoted to errors; the sample configuration validates.
+
+## Fifth workload — 2026-10-11
+
+Added persisted state transitions to the SQLite history contract:
+
+- Added `check_state` with last-known status and change timestamp.
+- `record_results()` now returns initial/current state transition records.
+- Changes are detected without coupling persistence to notification delivery.
+- Added regression coverage for initial state and recovery/failure changes.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 14 tests with
+`ResourceWarning` promoted to errors.

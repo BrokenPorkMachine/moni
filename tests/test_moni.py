@@ -87,6 +87,22 @@ class MoniTests(unittest.TestCase):
             database.close()
         self.assertEqual(rows, [(123.0, "health", 1, 200, None), (123.0, "db", 0, None, "refused")])
 
+    def test_history_returns_initial_and_changed_state_transitions(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        first = history.record_results(
+            path, [moni.CheckResult("health", "http", True, 1.0)], checked_at=10.0
+        )
+        second = history.record_results(
+            path, [moni.CheckResult("health", "http", False, 2.0, error="down")], checked_at=20.0
+        )
+        self.assertIsNone(first[0].previous_ok)
+        self.assertFalse(first[0].changed)
+        self.assertEqual(second[0].previous_ok, True)
+        self.assertTrue(second[0].changed)
+        self.assertEqual(second[0].changed_at, 20.0)
+
     def test_check_can_write_history(self):
         config = self.config({"checks": []})
         directory = TemporaryDirectory()
