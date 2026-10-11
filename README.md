@@ -32,7 +32,9 @@ environment values.
 Run `moni serve examples/moni.json` to expose a loopback-only API. `GET
 /health` reports aggregate status and `GET /checks` returns the latest
 structured results. The service refreshes checks every 30 seconds by default;
-use `--interval SECONDS` to change it.
+use `--interval SECONDS` to change it. Add `--history PATH --retention ROWS`
+to persist service observations while keeping only the newest bounded number
+of rows.
 
 Exit codes:
 

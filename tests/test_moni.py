@@ -179,6 +179,15 @@ class MoniTests(unittest.TestCase):
         self.assertEqual(rows[0]["name"], "new")
         self.assertFalse(rows[0]["ok"])
 
+    def test_prune_history_keeps_newest_rows(self):
+        directory = TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        path = Path(directory.name) / "history.sqlite"
+        for checked_at in (1.0, 2.0, 3.0):
+            history.record_results(path, [moni.CheckResult(str(checked_at), "tcp", True, 1.0)], checked_at=checked_at)
+        self.assertEqual(history.prune_observations(path, 2), 1)
+        self.assertEqual([row["name"] for row in history.recent_observations(path, 5)], ["3.0", "2.0"])
+
     def test_history_command_supports_json_and_limit_validation(self):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)

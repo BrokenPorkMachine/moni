@@ -147,3 +147,24 @@ def recent_observations(path: Path, limit: int = 20) -> list[dict[str, Any]]:
         }
         for row in rows
     ]
+
+
+def prune_observations(path: Path, max_rows: int) -> int:
+    """Keep the newest observation rows and return the number removed."""
+    if max_rows <= 0:
+        raise ValueError("max_rows must be positive")
+    try:
+        database = sqlite3.connect(path)
+        try:
+            database.executescript(SCHEMA)
+            cursor = database.execute(
+                "DELETE FROM observations WHERE id NOT IN "
+                "(SELECT id FROM observations ORDER BY checked_at DESC, id DESC LIMIT ?)",
+                (max_rows,),
+            )
+            database.commit()
+            return cursor.rowcount
+        finally:
+            database.close()
+    except sqlite3.Error as exc:
+        raise RuntimeError(f"cannot prune history {path}: {exc}") from exc

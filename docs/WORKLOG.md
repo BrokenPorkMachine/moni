@@ -179,3 +179,16 @@ Validation: `python3 -m unittest discover -s tests -v` passed 30 tests with
 `ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
 passed. Socket binding was not attempted because this sandbox denies local
 socket operations; handler-level endpoint coverage passed.
+
+## Long-term workload 6 — 2026-10-11
+
+Added bounded history retention for service mode:
+
+- Added a tested `prune_observations()` database operation that retains the
+  newest rows by timestamp and id.
+- Added `serve --history PATH --retention ROWS` for bounded service storage.
+- Added positive retention validation and documented the operator workflow.
+
+Validation: `python3 -m unittest discover -s tests -v` passed 31 tests with
+`ResourceWarning` promoted to errors; `make smoke` and `git diff --check` also
+passed.

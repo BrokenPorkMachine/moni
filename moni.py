@@ -287,6 +287,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--port", type=int, default=8765)
     serve_parser.add_argument("--interval", type=float, default=30.0, metavar="SECONDS")
     serve_parser.add_argument("--workers", type=int, default=None)
+    serve_parser.add_argument("--history", type=Path, default=None, metavar="PATH")
+    serve_parser.add_argument("--retention", type=int, default=None, metavar="ROWS")
     return parser
 
 
@@ -308,6 +310,8 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError("--port must be between 1 and 65535")
             if args.interval <= 0:
                 raise ConfigError("--interval must be positive")
+            if args.retention is not None and args.retention <= 0:
+                raise ConfigError("--retention must be positive")
             if args.workers is not None and args.workers <= 0:
                 raise ConfigError("--workers must be positive")
             store = api.StateStore()
@@ -318,6 +322,10 @@ def main(argv: list[str] | None = None) -> int:
                 while not stop.is_set():
                     results = run_checks(checks, args.workers)
                     store.replace([asdict(item) for item in results])
+                    if args.history is not None:
+                        history.record_results(args.history, results)
+                        if args.retention is not None:
+                            history.prune_observations(args.history, args.retention)
                     stop.wait(args.interval)
 
             worker = threading.Thread(target=refresh, name="moni-scheduler", daemon=True)
