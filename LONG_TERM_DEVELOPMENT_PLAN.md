@@ -113,7 +113,8 @@ For every workload:
   access are implemented. The v0.3 exit gate is met for the documented local
   service scope.
 - v0.4: in progress; the local agent identity/capability contract, signed
-  replay-protected report ingestion, and CLI coordinator wiring are
-  implemented. Scheduler/executor interfaces remain.
+  replay-protected report ingestion, CLI coordinator wiring, and replaceable
+  scheduler/persistence/notifier boundaries are implemented. Durable
+  coordinator storage and multi-agent scheduling remain.
 - v0.5–v1.0: not started.
 

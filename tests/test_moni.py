@@ -10,6 +10,7 @@ from unittest.mock import patch
 import moni
 import api
 import agent
+import components
 import history
 import notifier
 
@@ -385,6 +386,23 @@ class MoniTests(unittest.TestCase):
         with patch("moni.run_check", side_effect=lambda check: moni.CheckResult(check["name"], "tcp", True, 1.0)):
             results = moni.run_checks(checks)
         self.assertEqual([item.name for item in results], ["first", "second"])
+
+    def test_component_executor_preserves_order(self):
+        checks = [{"name": "first"}, {"name": "second"}]
+        with patch("components.as_completed", side_effect=lambda futures: reversed(list(futures))):
+            results = components.ThreadedCheckExecutor(
+                lambda check: moni.CheckResult(check["name"], "tcp", True, 1.0)
+            ).run(checks, workers=2)
+        self.assertEqual([item.name for item in results], ["first", "second"])
+
+    def test_component_adapters_delegate_to_existing_services(self):
+        result = moni.CheckResult("health", "http", True, 1.0)
+        with patch("history.record_results", return_value=["transition"]) as record:
+            self.assertEqual(components.SQLiteObservationStore().record(Path("history.db"), [result]), ["transition"])
+            record.assert_called_once()
+        with patch("notifier.send_transitions", return_value=True) as send:
+            self.assertTrue(components.WebhookTransitionNotifier().send("https://hook", ["transition"]))
+            send.assert_called_once()
 
     def test_invalid_worker_and_repeat_values_are_usage_errors(self):
         path = self.config({"checks": []})

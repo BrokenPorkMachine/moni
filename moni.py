@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import api
 import agent
+import components
 import json
 import logging
 import os
@@ -18,7 +19,6 @@ import sys
 import threading
 import time
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -214,15 +214,7 @@ def run_check(check: dict[str, Any]) -> CheckResult:
 
 
 def run_checks(checks: list[dict[str, Any]], workers: int | None = None) -> list[CheckResult]:
-    if not checks:
-        return []
-    max_workers = workers or min(32, len(checks))
-    results: list[CheckResult | None] = [None] * len(checks)
-    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="moni") as pool:
-        futures = {pool.submit(run_check, check): index for index, check in enumerate(checks)}
-        for future in as_completed(futures):
-            results[futures[future]] = future.result()
-    return [item for item in results if item is not None]
+    return components.ThreadedCheckExecutor(run_check).run(checks, workers)
 
 
 def select_checks(

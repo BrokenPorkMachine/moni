@@ -259,3 +259,15 @@ Wired the authenticated coordinator into service mode:
   endpoint coverage for coordinator snapshots.
 
 Validation: `make smoke` passed with 40 tests and `git diff --check` passed.
+
+## Long-term workload 12 — 2026-10-11
+
+Separated the local execution components behind replaceable contracts:
+
+- Added `CheckExecutor`, `ObservationStore`, and `TransitionNotifier` protocols.
+- Moved concurrent, configuration-order-preserving execution into a tested
+  `ThreadedCheckExecutor`.
+- Added adapters for the existing SQLite history and webhook services without
+  changing CLI behavior.
+
+Validation: `make smoke` passed with 42 tests and `git diff --check` passed.
